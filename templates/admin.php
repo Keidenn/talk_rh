@@ -1,0 +1,48 @@
+<?php
+script('talk_rh', 'admin');
+style('files', 'style');
+style('talk_rh', 'main');
+?>
+<div class="talkrh-container">
+  <div class="talkrh-header">
+    <h2>Gestion des demandes de congés</h2>
+    <div class="talkrh-actions">
+      <select id="filterStatus">
+        <option value="ALL">Tous les statuts</option>
+        <option value="pending">En attente</option>
+        <option value="approved">Approuvées</option>
+        <option value="rejected">Refusées</option>
+      </select>
+      <select id="filterUser">
+        <option value="ALL">Tous les employés</option>
+      </select>
+      <button id="openSettings" class="button"><span class="icon-settings"></span></button>
+    </div>
+  </div>
+  <div class="talkrh-calendar">
+    <div class="calendar-toolbar">
+      <button id="prevMonth" class="button">Mois précédent</button>
+      <div class="month-label" id="monthLabel"></div>
+      <button id="nextMonth" class="button">Mois suivant</button>
+    </div>
+    <div class="calendar-weekdays">
+      <div class="weekday">L</div>
+      <div class="weekday">M</div>
+      <div class="weekday">M</div>
+      <div class="weekday">J</div>
+      <div class="weekday">V</div>
+      <div class="weekday">S</div>
+      <div class="weekday">D</div>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+  <div class="talkrh-modal-backdrop" id="talkrhModalBackdrop" style="display:none;">
+    <div class="talkrh-modal" role="dialog" aria-modal="true" aria-labelledby="talkrhModalTitle">
+      <div class="talkrh-modal-header">
+        <h3 id="talkrhModalTitle"></h3>
+        <button id="talkrhModalClose" class="button">Fermer</button>
+      </div>
+      <div id="talkrhModalBody"></div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,197 @@
+:root {
+  --talkrh-border: #e5e7eb;
+  --talkrh-bg: #ffffff;
+  --talkrh-bg-alt: #fafafa;
+  --talkrh-text: #111827;
+  --talkrh-muted: #6b7280;
+  --talkrh-primary: var(--color-primary, #0082c9);
+}
+
+.talkrh-container {
+  max-width: 960px;
+  width: 100%;
+  margin: 24px auto;
+  padding: 32px;
+  color: var(--talkrh-text);
+  border-radius: 10px;
+  height: 100%;
+}
+
+.talkrh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.talkrh-header h2 {
+  margin: 0;
+  font-weight: 700;
+}
+
+.talkrh-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.talkrh-card {
+  background: var(--talkrh-bg);
+  border: 1px solid var(--talkrh-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+
+.talkrh-card .title {
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.talkrh-meta {
+  font-size: 13px;
+  color: var(--talkrh-muted);
+  margin-bottom: 10px;
+}
+
+.talkrh-badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.talkrh-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+.badge-pending { background: #fff7ed; color: #9a3412; border-color: #fdba74; }
+.badge-approved { background: #ecfdf5; color: #065f46; border-color: #6ee7b7; }
+.badge-rejected { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
+.talkrh-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button, .button {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--talkrh-border);
+  background: var(--talkrh-bg);
+  color: var(--talkrh-text);
+  cursor: pointer;
+}
+button.primary, .button.primary {
+  background: var(--talkrh-primary);
+  border-color: var(--talkrh-primary);
+  color: #fff;
+}
+button.danger { background: #ef4444; border-color: #ef4444; color: #fff; }
+button:disabled { opacity: .6; cursor: not-allowed; }
+
+.talkrh-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; color: var(--talkrh-muted); }
+.field input, .field select {
+  padding: 8px 10px;
+  border: 1px solid var(--talkrh-border);
+  border-radius: 8px;
+  background: var(--talkrh-bg);
+}
+
+.talkrh-empty {
+  border: 1px dashed var(--talkrh-border);
+  background: var(--talkrh-bg-alt);
+  color: var(--talkrh-muted);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* Calendar */
+.talkrh-calendar { margin-top: 8px; }
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.calendar-toolbar .month-label { font-weight: 600; }
+
+.calendar-weekdays, .calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.calendar-weekdays { margin-bottom: 6px; }
+.calendar-weekdays .weekday { font-size: 12px; color: var(--talkrh-muted); text-align: center; }
+
+.day-cell {
+  min-height: 100px;
+  background: var(--talkrh-bg);
+  border: 1px solid var(--talkrh-border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+.day-cell.outside { opacity: .5; }
+.day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.day-number { font-weight: 600; font-size: 13px; }
+.day-today { border-color: var(--talkrh-primary); box-shadow: 0 0 0 1px var(--talkrh-primary) inset; }
+.events { display: flex; flex-direction: column; gap: 4px; }
+.event-badge {
+  font-size: 9px;
+  border: 1px solid var(--talkrh-border);
+  background: var(--talkrh-bg-alt);
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.event-badge:hover { background: var(--talkrh-bg-alt-hover); cursor: pointer; }
+
+.talkrh-day-details {
+  margin-top: 12px;
+}
+.talkrh-day-details .talkrh-card { margin-bottom: 10px; }
+
+
+
+main#content, 
+div#content {
+    overflow-y: auto !important;
+    background: var(--talkrh-bg);
+}
+
+/* Modal */
+.talkrh-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: none;
+  z-index: 10000;
+}
+.talkrh-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, calc(100% - 32px));
+  max-height: 80vh;
+  overflow: auto;
+  background: var(--talkrh-bg);
+  border-radius: 12px;
+  border: 1px solid var(--talkrh-border);
+  box-shadow: 0 10px 30px rgba(0,0,0,.2);
+  padding: 16px;
+}
+.talkrh-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
