@@ -10,6 +10,14 @@
     if (parts.length !== 3) return iso;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
+  function formatDateLongFr(iso) {
+    if (!iso) return '';
+    try {
+      const [y, m, d] = iso.split('-').map(x => parseInt(x, 10));
+      const dt = new Date(y, (m - 1), d);
+      return new Intl.DateTimeFormat('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
+    } catch (e) { return formatDateFr(iso); }
+  }
   async function loadMyLeaves() {
     const list = document.getElementById('myLeaves');
     const empty = document.getElementById('empEmptyHint');
@@ -66,7 +74,7 @@
 
         const meta = document.createElement('div');
         meta.className = 'talkrh-meta';
-        meta.textContent = `${formatDateFr(l.start_date)} → ${formatDateFr(l.end_date)}` + (l.reason ? ` • Raison: ${l.reason}` : '');
+        meta.textContent = `${formatDateLongFr(l.start_date)} → ${formatDateLongFr(l.end_date)}` + (l.reason ? ` • Raison: ${l.reason}` : '');
 
         const badges = document.createElement('div');
         badges.className = 'talkrh-badges';
@@ -183,34 +191,32 @@
     const container = document.createElement('div');
     container.className = 'talkrh-day-details';
     const dates = eachDate(startIso, endIso);
+    const selected = {};
+    dates.forEach(dateIso => { selected[dateIso] = 'full'; });
     dates.forEach(dateIso => {
       const card = document.createElement('div');
       card.className = 'talkrh-card';
       const title = document.createElement('div');
       title.className = 'title';
-      title.textContent = formatDateFr(dateIso);
+      title.textContent = formatDateLongFr(dateIso);
       const opts = document.createElement('div');
-      opts.className = 'talkrh-actions';
-      opts.style.flexWrap = 'wrap';
-      const mkOpt = (label, value) => {
-        const id = `dp_${dateIso}_${value}`;
-        const lbl = document.createElement('label');
-        lbl.htmlFor = id;
-        lbl.style.marginRight = '12px';
-        const radio = document.createElement('input');
-        radio.type = 'radio';
-        radio.name = `dp_${dateIso}`;
-        radio.id = id;
-        radio.value = value;
-        if (value === 'full') radio.checked = true;
-        lbl.appendChild(radio);
-        const sp = document.createElement('span'); sp.textContent = ' ' + label;
-        lbl.appendChild(sp);
-        return lbl;
+      opts.className = 'option-cards';
+      const mkCard = (label, value) => {
+        const div = document.createElement('div');
+        div.className = 'option-card' + (value === 'full' ? ' selected' : '');
+        div.dataset.value = value;
+        div.textContent = label;
+        div.addEventListener('click', () => {
+          selected[dateIso] = value;
+          // toggle selection within this group
+          opts.querySelectorAll('.option-card').forEach(el => el.classList.remove('selected'));
+          div.classList.add('selected');
+        });
+        return div;
       };
-      opts.appendChild(mkOpt('Journée complète', 'full'));
-      opts.appendChild(mkOpt('Matinée', 'am'));
-      opts.appendChild(mkOpt('Après-midi', 'pm'));
+      opts.appendChild(mkCard('Journée complète', 'full'));
+      opts.appendChild(mkCard('Matinée', 'am'));
+      opts.appendChild(mkCard('Après-midi', 'pm'));
       card.appendChild(title);
       card.appendChild(opts);
       container.appendChild(card);
@@ -228,8 +234,14 @@
     // Bulk actions
     function setAll(value) {
       dates.forEach(dateIso => {
-        const radios = bodyEl.querySelectorAll(`input[name="dp_${dateIso}"]`);
-        radios.forEach(r => { if (r.value === value) r.checked = true; });
+        selected[dateIso] = value;
+        const group = container.querySelectorAll('.option-cards');
+      });
+      // Update UI
+      container.querySelectorAll('.option-cards').forEach(group => {
+        group.querySelectorAll('.option-card').forEach(el => {
+          el.classList.toggle('selected', el.dataset.value === value);
+        });
       });
     }
     btnAllFull.onclick = () => setAll('full');
@@ -239,14 +251,16 @@
     btnConfirm.onclick = () => {
       const map = {};
       dates.forEach(dateIso => {
-        const sel = bodyEl.querySelector(`input[name="dp_${dateIso}"]:checked`);
-        map[dateIso] = sel ? sel.value : 'full';
+        map[dateIso] = selected[dateIso] || 'full';
       });
       closeModal();
       if (typeof onConfirm === 'function') onConfirm(map);
     };
 
-    backdrop.style.display = 'block';
+    // Update UI
+    container.querySelectorAll('.option-cards').forEach(group => {
+      group.querySelectorAll('.option-card').forEach(el => {
+        el.classList.toggle('selected', el.dataset.value === selected[dateIso]);
   }
 
   async function loadIcsInfo() {

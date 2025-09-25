@@ -19,6 +19,14 @@
     if (parts.length !== 3) return iso;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
+  function formatDateLongFr(iso) {
+    if (!iso) return '';
+    try {
+      const [y, m, d] = iso.split('-').map(x => parseInt(x, 10));
+      const dt = new Date(y, (m - 1), d);
+      return new Intl.DateTimeFormat('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
+    } catch (e) { return formatDateFr(iso); }
+  }
 
   function leavesFiltered() {
     let filtered = currentFilterUser === 'ALL' ? allLeaves : allLeaves.filter(l => l.uid === currentFilterUser);
@@ -45,19 +53,47 @@
       const tdUser = document.createElement('td');
       tdUser.textContent = l.uid;
       const tdStart = document.createElement('td');
-      tdStart.textContent = formatDateFr(l.start_date);
+      tdStart.textContent = formatDateLongFr(l.start_date);
       const tdEnd = document.createElement('td');
-      tdEnd.textContent = formatDateFr(l.end_date);
+      tdEnd.textContent = formatDateLongFr(l.end_date);
       const tdType = document.createElement('td');
       tdType.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
       const tdStatus = document.createElement('td');
       tdStatus.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
+      const tdActions = document.createElement('td');
+      if (l.status === 'pending') {
+        const approve = document.createElement('button');
+        approve.className = 'button icon-button approve';
+        approve.title = 'Approuver';
+        approve.textContent = '✓';
+        approve.onclick = async () => {
+          const form = new FormData();
+          form.append('status', 'approved');
+          await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves/' + l.id + '/status'), { method: 'POST', body: form });
+          await loadAll();
+        };
+        const reject = document.createElement('button');
+        reject.className = 'button icon-button danger reject';
+        reject.title = 'Refuser';
+        reject.textContent = '✕';
+        reject.onclick = async () => {
+          const form = new FormData();
+          form.append('status', 'rejected');
+          await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves/' + l.id + '/status'), { method: 'POST', body: form });
+          await loadAll();
+        };
+        tdActions.appendChild(approve);
+        tdActions.appendChild(reject);
+      } else {
+        tdActions.textContent = '—';
+      }
       tr.appendChild(tdId);
       tr.appendChild(tdUser);
       tr.appendChild(tdStart);
       tr.appendChild(tdEnd);
       tr.appendChild(tdType);
       tr.appendChild(tdStatus);
+      tr.appendChild(tdActions);
       tbody.appendChild(tr);
     });
   }
@@ -140,7 +176,7 @@
       closeModal();
       return;
     }
-    titleEl.textContent = 'Détails du ' + formatDateFr(iso);
+    titleEl.textContent = 'Détails du ' + formatDateLongFr(iso);
     bodyEl.innerHTML = '';
     items.forEach(l => {
       const card = document.createElement('div');
@@ -150,7 +186,7 @@
       head.textContent = `#${l.id} • ${l.uid}`;
       const meta = document.createElement('div');
       meta.className = 'talkrh-meta';
-      meta.textContent = `${formatDateFr(l.start_date)} → ${formatDateFr(l.end_date)}` + (l.reason ? ` • Raison: ${l.reason}` : '');
+      meta.textContent = `${formatDateLongFr(l.start_date)} → ${formatDateLongFr(l.end_date)}` + (l.reason ? ` • Raison: ${l.reason}` : '');
       const badges = document.createElement('div');
       badges.className = 'talkrh-badges';
       const type = document.createElement('span');
@@ -389,14 +425,10 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
     const openSettingsBtn = document.getElementById('openSettings');
     if (openSettingsBtn) openSettingsBtn.onclick = openSettingsModal;
-    const toggleBtn = document.getElementById('toggleView');
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
-        currentView = currentView === 'calendar' ? 'list' : 'calendar';
-        toggleBtn.textContent = currentView === 'calendar' ? 'Vue liste' : 'Vue calendrier';
-        render();
-      });
-    }
+    const navViewCal = document.getElementById('navViewCalendar');
+    const navViewList = document.getElementById('navViewList');
+    if (navViewCal) navViewCal.addEventListener('click', (e) => { e.preventDefault(); currentView = 'calendar'; render(); });
+    if (navViewList) navViewList.addEventListener('click', (e) => { e.preventDefault(); currentView = 'list'; render(); });
     loadAll();
   });
 })();

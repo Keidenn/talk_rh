@@ -7,10 +7,18 @@
   --talkrh-primary: var(--color-primary, #0082c9);
 }
 
+/* Layout with left sidebar */
+.talkrh-layout {
+  display: flex;
+  gap: 16px;
+}
+.talkrh-main { flex: 1; min-width: 0; }
+.app-navigation { min-width: 240px; }
+
 .talkrh-container {
-  max-width: 960px;
+  max-width: 1100px;
   width: 100%;
-  margin: 24px auto;
+  margin: 24px 0;
   padding: 32px;
   color: var(--talkrh-text);
   border-radius: 10px;
@@ -225,3 +233,25 @@ div#content {
   font-weight: 600;
   color: var(--talkrh-muted);
 }
+
+/* Icon buttons in admin list */
+.icon-button { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+.icon-button.approve { background: #10b981; border-color: #10b981; color: #fff; }
+.icon-button.reject, .icon-button.danger { background: #ef4444; border-color: #ef4444; color: #fff; }
+
+/* Employee list grid */
+#myLeaves.talkrh-list { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 700px) { #myLeaves.talkrh-list { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { #myLeaves.talkrh-list { grid-template-columns: repeat(3, 1fr); } }
+
+/* Day parts modal option cards */
+.option-cards { display: flex; gap: 10px; flex-wrap: wrap; }
+.option-card {
+  border: 1px solid var(--talkrh-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: var(--talkrh-bg);
+  user-select: none;
+}
+.option-card.selected { border-color: var(--talkrh-primary); box-shadow: 0 0 0 1px var(--talkrh-primary) inset; }

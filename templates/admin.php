@@ -3,7 +3,25 @@ script('talk_rh', 'admin');
 style('files', 'style');
 style('talk_rh', 'main');
 ?>
-<div class="talkrh-container">
+<div class="talkrh-layout">
+  <?php if (!empty($_['isAdmin'])): ?>
+  <nav class="app-navigation">
+    <ul class="app-navigation__list app-navigation-list">
+      <li class="app-navigation-entry">
+        <a class="app-navigation-entry__link" href="#">Vue admin</a>
+        <ul class="app-navigation__children">
+          <li class="app-navigation-entry"><a id="navViewCalendar" class="app-navigation-entry__link" href="#">Vue calendrier</a></li>
+          <li class="app-navigation-entry"><a id="navViewList" class="app-navigation-entry__link" href="#">Vue liste</a></li>
+        </ul>
+      </li>
+      <li class="app-navigation-entry">
+        <a class="app-navigation-entry__link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">Vue employé</a>
+      </li>
+    </ul>
+  </nav>
+  <?php endif; ?>
+  <div class="talkrh-main">
+    <div class="talkrh-container">
   <div class="talkrh-header">
     <h2>Gestion des demandes de congés</h2>
     <div class="talkrh-actions">
@@ -17,7 +35,6 @@ style('talk_rh', 'main');
         <option value="ALL">Tous les employés</option>
       </select>
       <button id="openSettings" class="button"><span class="icon-settings"></span></button>
-      <button id="toggleView" class="button" title="Basculer la vue">Vue liste</button>
     </div>
   </div>
   <div class="talkrh-calendar">
@@ -51,6 +68,7 @@ style('talk_rh', 'main');
               <th>Au</th>
               <th>Type</th>
               <th>Statut</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -67,15 +85,6 @@ style('talk_rh', 'main');
       <div id="talkrhModalBody"></div>
     </div>
   </div>
-</div>
-<?php if (!empty($_['isAdmin'])): ?>
-  <div class="talkrh-sidepanel">
-    <div class="talkrh-card" style="margin-bottom:8px;">
-      <div class="title">Navigation</div>
-      <div class="talkrh-actions" style="flex-direction:column; align-items:stretch;">
-        <a class="button primary" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.index')); ?>">Vue admin</a>
-        <a class="button" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">Vue employé</a>
-      </div>
     </div>
   </div>
-<?php endif; ?>
+</div>

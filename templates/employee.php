@@ -3,7 +3,21 @@ script('talk_rh', 'employee');
 style('files', 'style');
 style('talk_rh', 'main');
 ?>
-<div class="talkrh-container">
+<div class="talkrh-layout">
+  <?php if (!empty($_['isAdmin'])): ?>
+  <nav class="app-navigation">
+    <ul class="app-navigation__list app-navigation-list">
+      <li class="app-navigation-entry">
+        <a class="app-navigation-entry__link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.index')); ?>">Vue admin</a>
+      </li>
+      <li class="app-navigation-entry">
+        <a class="app-navigation-entry__link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">Vue employé</a>
+      </li>
+    </ul>
+  </nav>
+  <?php endif; ?>
+  <div class="talkrh-main">
+    <div class="talkrh-container">
   <div class="talkrh-header">
     <h2>Mes demandes de congés</h2>
   </div>
@@ -62,6 +76,8 @@ style('talk_rh', 'main');
   </div>
   <ul id="myLeaves" class="talkrh-list"></ul>
   <div class="talkrh-empty" id="empEmptyHint" style="display:none;">Aucune demande pour le moment.</div>
+    </div>
+  </div>
 </div>
 
 <div class="talkrh-modal-backdrop" id="talkrhModalBackdrop" style="display:none;">
@@ -74,15 +90,5 @@ style('talk_rh', 'main');
   </div>
   </div>
 
-<?php if (!empty($_['isAdmin'])): ?>
-  <div class="talkrh-sidepanel">
-    <div class="talkrh-card" style="margin-bottom:8px;">
-      <div class="title">Navigation</div>
-      <div class="talkrh-actions" style="flex-direction:column; align-items:stretch;">
-        <a class="button" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.index')); ?>">Vue admin</a>
-        <a class="button primary" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">Vue employé</a>
-      </div>
-    </div>
-  </div>
-<?php endif; ?>
+ 
 
