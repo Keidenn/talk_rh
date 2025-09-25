@@ -28,6 +28,12 @@
     } catch (e) { return formatDateFr(iso); }
   }
 
+  // Keep capitalization purely presentational for long French dates
+  function titleCaseFr(s) {
+    if (!s) return s;
+    return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+
   function leavesFiltered() {
     let filtered = currentFilterUser === 'ALL' ? allLeaves : allLeaves.filter(l => l.uid === currentFilterUser);
     if (currentFilterStatus !== 'ALL') {
@@ -176,7 +182,7 @@
       closeModal();
       return;
     }
-    titleEl.textContent = 'Détails du ' + formatDateLongFr(iso);
+    titleEl.textContent = 'Détails du ' + titleCaseFr(formatDateLongFr(iso));
     bodyEl.innerHTML = '';
     items.forEach(l => {
       const card = document.createElement('div');
@@ -427,10 +433,25 @@
     if (openSettingsBtn) openSettingsBtn.onclick = openSettingsModal;
     const navViewCal = document.getElementById('navViewCalendar');
     const navViewList = document.getElementById('navViewList');
+
+    // Initialize current view from URL param if provided
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('view');
+      if (v === 'list' || v === 'calendar') {
+        currentView = v;
+      }
+    } catch (e) { /* ignore */ }
     if (navViewCal) {
       navViewCal.addEventListener('click', (e) => { 
         e.preventDefault(); 
         currentView = 'calendar'; 
+        // Persist view in URL
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('view', 'calendar');
+          window.history.replaceState(null, '', url);
+        } catch (e) { /* ignore */ }
         updateActiveNav();
         render(); 
       });
@@ -439,23 +460,51 @@
       navViewList.addEventListener('click', (e) => { 
         e.preventDefault(); 
         currentView = 'list'; 
+        // Persist view in URL
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('view', 'list');
+          window.history.replaceState(null, '', url);
+        } catch (e) { /* ignore */ }
         updateActiveNav();
         render(); 
       });
     }
     
     function updateActiveNav() {
-      // Remove active class from all nav items
-      document.querySelectorAll('.app-navigation-entry').forEach(el => el.classList.remove('active'));
+      // Ensure main admin entry stays active with more robust selector
+      const adminEntry = document.querySelector('.app-navigation-entry-link[href="/apps/talk_rh/page"]');
+      if (adminEntry && !adminEntry.closest('.app-navigation-entry__children')) {
+        const navEntry = adminEntry.closest('.app-navigation-entry');
+        if (navEntry) {
+          navEntry.classList.add('active');
+        }
+      }
+      
+      // Remove active class from sub-menu items only
+      document.querySelectorAll('#nav-calendar, #nav-list').forEach(el => el.classList.remove('active'));
+      
       // Add active class to current view
-      if (currentView === 'calendar' && navViewCal) {
-        navViewCal.closest('.app-navigation-entry').classList.add('active');
-      } else if (currentView === 'list' && navViewList) {
-        navViewList.closest('.app-navigation-entry').classList.add('active');
+      if (currentView === 'calendar') {
+        const calEl = document.getElementById('nav-calendar');
+        if (calEl) calEl.classList.add('active');
+      } else if (currentView === 'list') {
+        const listEl = document.getElementById('nav-list');
+        if (listEl) listEl.classList.add('active');
+      }
+
+      // Toggle sub-menu icon variants (-white for active, -dark for inactive)
+      const calIcon = document.querySelector('#nav-calendar .app-navigation-entry-icon span');
+      const listIcon = document.querySelector('#nav-list .app-navigation-entry-icon span');
+      if (calIcon) {
+        calIcon.className = (currentView === 'calendar') ? 'icon-calendar-white' : 'icon-calendar-dark';
+      }
+      if (listIcon) {
+        listIcon.className = (currentView === 'list') ? 'icon-view-module-white' : 'icon-view-module-dark';
       }
     }
     
-    // Set initial active state
+    // Set initial active state (after possibly reading URL param)
     updateActiveNav();
     loadAll();
   });

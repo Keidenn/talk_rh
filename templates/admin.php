@@ -1,69 +1,14 @@
 <?php
 script('talk_rh', 'admin');
+script('talk_rh', 'navigation');
 style('files', 'style');
 style('talk_rh', 'main');
+
+// Set navigation context
+$_['currentPage'] = 'admin';
 ?>
 <div class="talkrh-layout">
-  <?php if (!empty($_['isAdmin'])): ?>
-  <nav class="app-navigation">
-    <ul class="app-navigation__list app-navigation-list">
-      <li class="app-navigation-entry-wrapper app-navigation-entry--collapsible app-navigation-entry--opened">
-        <div class="app-navigation-entry active">
-          <a class="app-navigation-entry-link" href="#">
-            <div class="app-navigation-entry-icon">
-              <span class="icon-category-office"></span>
-            </div>
-            <span class="app-navigation-entry__name">Vue admin</span>
-          </a>
-        </div>
-        <ul class="app-navigation-entry__children">
-          <li class="app-navigation-entry-wrapper">
-            <div class="app-navigation-entry">
-              <a id="navViewCalendar" class="app-navigation-entry-link" href="#">
-                <div class="app-navigation-entry-icon">
-                  <span class="icon-calendar"></span>
-                </div>
-                <span class="app-navigation-entry__name">Vue calendrier</span>
-              </a>
-            </div>
-          </li>
-          <li class="app-navigation-entry-wrapper">
-            <div class="app-navigation-entry">
-              <a id="navViewList" class="app-navigation-entry-link" href="#">
-                <div class="app-navigation-entry-icon">
-                  <span class="icon-view-module"></span>
-                </div>
-                <span class="app-navigation-entry__name">Vue liste</span>
-              </a>
-            </div>
-          </li>
-        </ul>
-      </li>
-      <li class="app-navigation-entry-wrapper">
-        <div class="app-navigation-entry">
-          <a class="app-navigation-entry-link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">
-            <div class="app-navigation-entry-icon">
-              <span class="icon-user"></span>
-            </div>
-            <span class="app-navigation-entry__name">Vue employé</span>
-          </a>
-        </div>
-      </li>
-    </ul>
-    <div class="app-navigation-settings">
-      <div class="app-navigation-entry-wrapper">
-        <div class="app-navigation-entry">
-          <a class="app-navigation-entry-link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.settingsView')); ?>">
-            <div class="app-navigation-entry-icon">
-              <span class="icon-settings"></span>
-            </div>
-            <span class="app-navigation-entry__name">Paramètres</span>
-          </a>
-        </div>
-      </div>
-    </div>
-  </nav>
-  <?php endif; ?>
+  <?php include_once __DIR__ . '/navigation.php'; ?>
   <div class="talkrh-main">
     <div class="talkrh-container">
   <div class="talkrh-header">

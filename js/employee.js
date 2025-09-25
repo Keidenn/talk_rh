@@ -19,6 +19,12 @@
       return new Intl.DateTimeFormat('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
     } catch (e) { return formatDateFr(iso); }
   }
+
+  // Presentational helper for capitalizing French long dates when needed
+  function titleCaseFr(s) {
+    if (!s) return s;
+    return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
   
   async function loadMyLeaves() {
     const list = document.getElementById('myLeaves');
@@ -201,7 +207,7 @@
       card.className = 'talkrh-card';
       const title = document.createElement('div');
       title.className = 'title';
-      title.textContent = formatDateLongFr(dateIso);
+      title.textContent = titleCaseFr(formatDateLongFr(dateIso));
       const opts = document.createElement('div');
       opts.className = 'option-cards';
       
@@ -274,7 +280,7 @@
       const data = await res.json();
       input.value = data.url || '';
     } catch (e) {
-      input.value = 'Erreur de chargement de l'URL ICS';
+      input.value = "Erreur de chargement de l'URL ICS";
       console.error('[talk_rh] employee.js: error fetching ics token/url', e);
     }
   }
@@ -309,6 +315,31 @@
     }
   }
 
+  // Fallback for radio "card" styles: add/remove 'selected' on labels when checked
+  function initRadioCards() {
+    try {
+      const containers = document.querySelectorAll('.talkrh-actions');
+      containers.forEach(container => {
+        const radios = container.querySelectorAll('label > input[type="radio"]');
+        radios.forEach(input => {
+          const label = input.closest('label');
+          if (!label) return;
+          const updateGroup = () => {
+            const name = input.name;
+            const group = Array.from(container.querySelectorAll('input[type="radio"]').values()).filter(r => r.name === name);
+            group.forEach(r => {
+              const lbl = r.closest('label');
+              if (lbl) lbl.classList.toggle('selected', r.checked);
+            });
+          };
+          // Initialize and bind
+          updateGroup();
+          input.addEventListener('change', updateGroup);
+        });
+      });
+    } catch (_) {}
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[talk_rh] employee.js: DOMContentLoaded');
     bindCreate();
@@ -329,6 +360,7 @@
     if (closeBtn) closeBtn.onclick = closeModal;
     if (backdrop) backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    initRadioCards();
     loadMyLeaves();
     bindIcsActions();
     loadIcsInfo();

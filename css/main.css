@@ -5,32 +5,93 @@
   --talkrh-text: #111827;
   --talkrh-muted: #6b7280;
   --talkrh-primary: var(--color-primary, #0082c9);
+  --talkrh-primary-rgb: 0, 130, 201;
 }
 
-/* Layout with left sidebar */
+/* Layout with left sidebar - contained within app */
 .talkrh-layout {
   display: flex;
-  height: 100vh;
-}
-.talkrh-main { 
-  flex: 1; 
-  min-width: 0; 
-  overflow-y: auto;
+  min-height: calc(100vh - 50px); /* Account for Nextcloud header */
+  max-width: 100%;
+  margin: 0;
+  background: var(--color-main-background);
 }
 
-/* App navigation styling to match Nextcloud */
-.app-navigation {
+.talkrh-main { 
+  flex: 1; 
+  min-width: 0;
+  background: var(--color-main-background);
+}
+
+/* Navigation styling to match Nextcloud apps */
+.talkrh-navigation {
   width: 300px;
   min-width: 300px;
   background-color: var(--color-main-background);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  height: 100vh;
   overflow-y: auto;
+  transition: transform 0.3s ease;
 }
 
-.app-navigation .app-navigation__list {
+/* Mobile toggle button */
+.talkrh-nav-toggle {
+  display: none;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1001;
+  background: var(--color-primary-element);
+  color: var(--color-primary-element-text);
+  border: none;
+  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Mobile responsive */
+@media (max-width: 1024px) {
+  .talkrh-layout {
+    position: relative;
+  }
+  
+  .talkrh-navigation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 1000;
+    transform: translateX(-100%);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+  }
+  
+  .talkrh-navigation.show {
+    transform: translateX(0);
+  }
+  
+  .talkrh-nav-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .talkrh-main {
+    width: 100%;
+    padding-top: 60px; /* Space for toggle button */
+  }
+}
+
+@media (min-width: 1025px) {
+  .talkrh-nav-toggle {
+    display: none !important;
+  }
+}
+
+.talkrh-navigation .app-navigation__list {
   flex: 1;
   padding: 12px;
   margin: 0;
@@ -76,6 +137,14 @@
   flex-shrink: 0;
 }
 
+.app-navigation-entry-icon span {
+  color: var(--color-main-text);
+}
+
+.app-navigation-entry.active .app-navigation-entry-icon span {
+  color: var(--color-primary-element-text);
+}
+
 .app-navigation-entry__name {
   flex: 1;
   padding-right: 12px;
@@ -97,6 +166,16 @@
   border-top: 1px solid var(--color-border);
   padding: 12px;
   margin-top: auto;
+}
+
+/* Sub-menu active states */
+.app-navigation-entry__children .app-navigation-entry.active {
+  background-color: var(--color-primary-element-light) !important;
+}
+
+.app-navigation-entry__children .app-navigation-entry.active .app-navigation-entry-link {
+  color: var(--color-primary-element) !important;
+  font-weight: 600;
 }
 
 .talkrh-container {
@@ -326,3 +405,33 @@ div#content {
   user-select: none;
 }
 .option-card.selected { border-color: var(--talkrh-primary); box-shadow: 0 0 0 1px var(--talkrh-primary) inset; }
+
+
+.talkrh-actions label input[type="radio"] {
+  display: none;
+}
+
+.talkrh-actions label {
+  border: 1px solid #7b7b7b57;
+  border-radius: 8px;
+  padding: 16px;
+  transition: .3s ease-in;
+}
+
+.talkrh-actions label span {
+  cursor: pointer;
+}
+
+.talkrh-actions label:hover {
+  border-color: rgba(var(--talkrh-primary-rgb), .2);
+}
+
+.talkrh-actions label.selected {
+  border-color: var(--talkrh-primary);
+}
+
+/* CSS-only selected state when the radio inside the label is checked */
+.talkrh-actions label:has(*) > input[type="radio"]:checked {
+  border-color: var(--talkrh-primary);
+  box-shadow: 0 0 0 1px var(--talkrh-primary) inset;
+}
