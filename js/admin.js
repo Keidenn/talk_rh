@@ -427,8 +427,36 @@
     if (openSettingsBtn) openSettingsBtn.onclick = openSettingsModal;
     const navViewCal = document.getElementById('navViewCalendar');
     const navViewList = document.getElementById('navViewList');
-    if (navViewCal) navViewCal.addEventListener('click', (e) => { e.preventDefault(); currentView = 'calendar'; render(); });
-    if (navViewList) navViewList.addEventListener('click', (e) => { e.preventDefault(); currentView = 'list'; render(); });
+    if (navViewCal) {
+      navViewCal.addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        currentView = 'calendar'; 
+        updateActiveNav();
+        render(); 
+      });
+    }
+    if (navViewList) {
+      navViewList.addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        currentView = 'list'; 
+        updateActiveNav();
+        render(); 
+      });
+    }
+    
+    function updateActiveNav() {
+      // Remove active class from all nav items
+      document.querySelectorAll('.app-navigation-entry').forEach(el => el.classList.remove('active'));
+      // Add active class to current view
+      if (currentView === 'calendar' && navViewCal) {
+        navViewCal.closest('.app-navigation-entry').classList.add('active');
+      } else if (currentView === 'list' && navViewList) {
+        navViewList.closest('.app-navigation-entry').classList.add('active');
+      }
+    }
+    
+    // Set initial active state
+    updateActiveNav();
     loadAll();
   });
 })();

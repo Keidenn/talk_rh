@@ -10,10 +10,94 @@
 /* Layout with left sidebar */
 .talkrh-layout {
   display: flex;
-  gap: 16px;
+  height: 100vh;
 }
-.talkrh-main { flex: 1; min-width: 0; }
-.app-navigation { min-width: 240px; }
+.talkrh-main { 
+  flex: 1; 
+  min-width: 0; 
+  overflow-y: auto;
+}
+
+/* App navigation styling to match Nextcloud */
+.app-navigation {
+  width: 300px;
+  min-width: 300px;
+  background-color: var(--color-main-background);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.app-navigation .app-navigation__list {
+  flex: 1;
+  padding: 12px;
+  margin: 0;
+  list-style: none;
+}
+
+.app-navigation-entry-wrapper {
+  margin-bottom: 4px;
+}
+
+.app-navigation-entry {
+  border-radius: var(--border-radius-element, 6px);
+  transition: background-color 200ms ease-in-out;
+}
+
+.app-navigation-entry:hover {
+  background-color: var(--color-background-hover);
+}
+
+.app-navigation-entry.active {
+  background-color: var(--color-primary-element) !important;
+}
+
+.app-navigation-entry.active .app-navigation-entry-link {
+  color: var(--color-primary-element-text) !important;
+}
+
+.app-navigation-entry-link {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  text-decoration: none;
+  color: var(--color-main-text);
+  min-height: 44px;
+}
+
+.app-navigation-entry-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.app-navigation-entry__name {
+  flex: 1;
+  padding-right: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-navigation-entry__children {
+  margin-left: 16px;
+  margin-top: 4px;
+}
+
+.app-navigation-entry__children .app-navigation-entry-wrapper {
+  margin-bottom: 2px;
+}
+
+.app-navigation-settings {
+  border-top: 1px solid var(--color-border);
+  padding: 12px;
+  margin-top: auto;
+}
 
 .talkrh-container {
   max-width: 1100px;
@@ -204,19 +288,6 @@ div#content {
   margin-bottom: 10px;
 }
 
-/* Side panel for admin navigation */
-.talkrh-sidepanel {
-  position: fixed;
-  top: 90px;
-  right: 16px;
-  width: 250px;
-  max-width: calc(100% - 32px);
-  z-index: 10001;
-}
-
-@media (max-width: 900px) {
-  .talkrh-sidepanel { position: static; width: 100%; margin-top: 12px; }
-}
 
 /* Simple table styles for admin list view */
 .talkrh-table {

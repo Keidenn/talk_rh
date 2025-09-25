@@ -59,4 +59,25 @@ class PageController extends Controller {
         }
         return new TemplateResponse($this->appName, 'employee', ['isAdmin' => $isAdmin]);
     }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function settingsView(): TemplateResponse {
+        $user = $this->userSession->getUser();
+        if ($user === null) {
+            return new TemplateResponse($this->appName, 'not-logged-in');
+        }
+
+        $adminGroup = Application::getAdminGroupId($this->config);
+        $isServerAdmin = $this->groupManager->isAdmin($user->getUID());
+        $isAppAdmin = $this->groupManager->isInGroup($user->getUID(), $adminGroup);
+
+        if (!($isServerAdmin || $isAppAdmin)) {
+            throw new \OCP\AppFramework\Http\NotFoundResponse();
+        }
+        
+        return new TemplateResponse($this->appName, 'settings', ['isAdmin' => true]);
+    }
 }

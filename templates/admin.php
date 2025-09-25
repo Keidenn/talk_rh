@@ -7,17 +7,61 @@ style('talk_rh', 'main');
   <?php if (!empty($_['isAdmin'])): ?>
   <nav class="app-navigation">
     <ul class="app-navigation__list app-navigation-list">
-      <li class="app-navigation-entry">
-        <a class="app-navigation-entry__link" href="#">Vue admin</a>
-        <ul class="app-navigation__children">
-          <li class="app-navigation-entry"><a id="navViewCalendar" class="app-navigation-entry__link" href="#">Vue calendrier</a></li>
-          <li class="app-navigation-entry"><a id="navViewList" class="app-navigation-entry__link" href="#">Vue liste</a></li>
+      <li class="app-navigation-entry-wrapper app-navigation-entry--collapsible app-navigation-entry--opened">
+        <div class="app-navigation-entry active">
+          <a class="app-navigation-entry-link" href="#">
+            <div class="app-navigation-entry-icon">
+              <span class="icon-category-office"></span>
+            </div>
+            <span class="app-navigation-entry__name">Vue admin</span>
+          </a>
+        </div>
+        <ul class="app-navigation-entry__children">
+          <li class="app-navigation-entry-wrapper">
+            <div class="app-navigation-entry">
+              <a id="navViewCalendar" class="app-navigation-entry-link" href="#">
+                <div class="app-navigation-entry-icon">
+                  <span class="icon-calendar"></span>
+                </div>
+                <span class="app-navigation-entry__name">Vue calendrier</span>
+              </a>
+            </div>
+          </li>
+          <li class="app-navigation-entry-wrapper">
+            <div class="app-navigation-entry">
+              <a id="navViewList" class="app-navigation-entry-link" href="#">
+                <div class="app-navigation-entry-icon">
+                  <span class="icon-view-module"></span>
+                </div>
+                <span class="app-navigation-entry__name">Vue liste</span>
+              </a>
+            </div>
+          </li>
         </ul>
       </li>
-      <li class="app-navigation-entry">
-        <a class="app-navigation-entry__link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">Vue employé</a>
+      <li class="app-navigation-entry-wrapper">
+        <div class="app-navigation-entry">
+          <a class="app-navigation-entry-link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">
+            <div class="app-navigation-entry-icon">
+              <span class="icon-user"></span>
+            </div>
+            <span class="app-navigation-entry__name">Vue employé</span>
+          </a>
+        </div>
       </li>
     </ul>
+    <div class="app-navigation-settings">
+      <div class="app-navigation-entry-wrapper">
+        <div class="app-navigation-entry">
+          <a class="app-navigation-entry-link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.settingsView')); ?>">
+            <div class="app-navigation-entry-icon">
+              <span class="icon-settings"></span>
+            </div>
+            <span class="app-navigation-entry__name">Paramètres</span>
+          </a>
+        </div>
+      </div>
+    </div>
   </nav>
   <?php endif; ?>
   <div class="talkrh-main">
@@ -34,7 +78,6 @@ style('talk_rh', 'main');
       <select id="filterUser">
         <option value="ALL">Tous les employés</option>
       </select>
-      <button id="openSettings" class="button"><span class="icon-settings"></span></button>
     </div>
   </div>
   <div class="talkrh-calendar">

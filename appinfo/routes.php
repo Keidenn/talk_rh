@@ -5,6 +5,7 @@ return [
         ['name' => 'page#index', 'url' => '/page', 'verb' => 'GET'],
         // Vue employé accessible explicitement (utile pour les admins aussi)
         ['name' => 'page#employeeView', 'url' => '/page/employee', 'verb' => 'GET'],
+    ['name' => 'page#settingsView', 'url' => '/page/settings', 'verb' => 'GET'],
 
         // Employee API
         ['name' => 'api#getMyLeaves', 'url' => '/api/leaves', 'verb' => 'GET'],

@@ -7,11 +7,40 @@ style('talk_rh', 'main');
   <?php if (!empty($_['isAdmin'])): ?>
   <nav class="app-navigation">
     <ul class="app-navigation__list app-navigation-list">
-      <li class="app-navigation-entry">
-        <a class="app-navigation-entry__link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.index')); ?>">Vue admin</a>
+      <li class="app-navigation-entry-wrapper">
+        <div class="app-navigation-entry">
+          <a class="app-navigation-entry-link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.index')); ?>">
+            <div class="app-navigation-entry-icon">
+              <span class="icon-category-office"></span>
+            </div>
+            <span class="app-navigation-entry__name">Vue admin</span>
+          </a>
+        </div>
       </li>
-      <li class="app-navigation-entry">
-        <a class="app-navigation-entry__link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">Vue employé</a>
+      <li class="app-navigation-entry-wrapper">
+        <div class="app-navigation-entry active">
+          <a class="app-navigation-entry-link" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">
+            <div class="app-navigation-entry-icon">
+              <span class="icon-user"></span>
+            </div>
+            <span class="app-navigation-entry__name">Vue employé</span>
+          </a>
+        </div>
+      </li>
+    </ul>
+  </nav>
+  <?php else: ?>
+  <nav class="app-navigation">
+    <ul class="app-navigation__list app-navigation-list">
+      <li class="app-navigation-entry-wrapper">
+        <div class="app-navigation-entry active">
+          <a class="app-navigation-entry-link" href="#">
+            <div class="app-navigation-entry-icon">
+              <span class="icon-user"></span>
+            </div>
+            <span class="app-navigation-entry__name">Mes congés</span>
+          </a>
+        </div>
       </li>
     </ul>
   </nav>

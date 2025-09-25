@@ -10,6 +10,7 @@
     if (parts.length !== 3) return iso;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
+  
   function formatDateLongFr(iso) {
     if (!iso) return '';
     try {
@@ -18,6 +19,7 @@
       return new Intl.DateTimeFormat('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
     } catch (e) { return formatDateFr(iso); }
   }
+  
   async function loadMyLeaves() {
     const list = document.getElementById('myLeaves');
     const empty = document.getElementById('empEmptyHint');
@@ -193,6 +195,7 @@
     const dates = eachDate(startIso, endIso);
     const selected = {};
     dates.forEach(dateIso => { selected[dateIso] = 'full'; });
+    
     dates.forEach(dateIso => {
       const card = document.createElement('div');
       card.className = 'talkrh-card';
@@ -201,6 +204,7 @@
       title.textContent = formatDateLongFr(dateIso);
       const opts = document.createElement('div');
       opts.className = 'option-cards';
+      
       const mkCard = (label, value) => {
         const div = document.createElement('div');
         div.className = 'option-card' + (value === 'full' ? ' selected' : '');
@@ -214,6 +218,7 @@
         });
         return div;
       };
+      
       opts.appendChild(mkCard('Journée complète', 'full'));
       opts.appendChild(mkCard('Matinée', 'am'));
       opts.appendChild(mkCard('Après-midi', 'pm'));
@@ -235,7 +240,6 @@
     function setAll(value) {
       dates.forEach(dateIso => {
         selected[dateIso] = value;
-        const group = container.querySelectorAll('.option-cards');
       });
       // Update UI
       container.querySelectorAll('.option-cards').forEach(group => {
@@ -257,10 +261,7 @@
       if (typeof onConfirm === 'function') onConfirm(map);
     };
 
-    // Update UI
-    container.querySelectorAll('.option-cards').forEach(group => {
-      group.querySelectorAll('.option-card').forEach(el => {
-        el.classList.toggle('selected', el.dataset.value === selected[dateIso]);
+    backdrop.style.display = 'block';
   }
 
   async function loadIcsInfo() {
@@ -273,7 +274,7 @@
       const data = await res.json();
       input.value = data.url || '';
     } catch (e) {
-      input.value = 'Erreur de chargement de l’URL ICS';
+      input.value = 'Erreur de chargement de l'URL ICS';
       console.error('[talk_rh] employee.js: error fetching ics token/url', e);
     }
   }
