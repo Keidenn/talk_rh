@@ -19,9 +19,9 @@ style('talk_rh', 'main');
     <div class="field">
       <label for="type">Type</label>
       <select id="type">
-        <option value="paid">Payé</option>
-        <option value="unpaid">Non payé</option>
-        <option value="sick">Maladie</option>
+        <option value="paid">Soldé</option>
+        <option value="unpaid">Sans Solde</option>
+        <option value="sick">Anticipé</option>
       </select>
     </div>
     <div class="field">
@@ -42,7 +42,47 @@ style('talk_rh', 'main');
     </div>
     <div class="talkrh-meta">Ajoutez ce lien en abonnement ICS dans l'application Calendrier de Nextcloud pour voir vos congés approuvés.</div>
   </div>
+  <div class="talkrh-actions" style="justify-content: space-between; align-items:center; margin: 8px 0;">
+    <div>
+      <label for="empPageSize" style="font-size:13px; color: var(--talkrh-muted);">Affichage:</label>
+      <select id="empPageSize">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="15">15</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+    <div>
+      <button id="empPrev" class="button">Précédent</button>
+      <span id="empPageInfo" class="talkrh-meta" style="margin: 0 8px;">Page 1/1</span>
+      <button id="empNext" class="button">Suivant</button>
+    </div>
+  </div>
   <ul id="myLeaves" class="talkrh-list"></ul>
   <div class="talkrh-empty" id="empEmptyHint" style="display:none;">Aucune demande pour le moment.</div>
 </div>
+
+<div class="talkrh-modal-backdrop" id="talkrhModalBackdrop" style="display:none;">
+  <div class="talkrh-modal" role="dialog" aria-modal="true" aria-labelledby="talkrhModalTitle">
+    <div class="talkrh-modal-header">
+      <h3 id="talkrhModalTitle"></h3>
+      <button id="talkrhModalClose" class="button">Fermer</button>
+    </div>
+    <div id="talkrhModalBody"></div>
+  </div>
+  </div>
+
+<?php if (!empty($_['isAdmin'])): ?>
+  <div class="talkrh-sidepanel">
+    <div class="talkrh-card" style="margin-bottom:8px;">
+      <div class="title">Navigation</div>
+      <div class="talkrh-actions" style="flex-direction:column; align-items:stretch;">
+        <a class="button" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.index')); ?>">Vue admin</a>
+        <a class="button primary" href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('talk_rh.page.employeeView')); ?>">Vue employé</a>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
 

@@ -6,6 +6,7 @@
   const today = new Date();
   let currentYear = today.getFullYear();
   let currentMonth = today.getMonth(); // 0-11
+  let currentView = 'calendar'; // 'calendar' | 'list'
 
   const monthNamesFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
@@ -17,6 +18,64 @@
     const parts = iso.split('-');
     if (parts.length !== 3) return iso;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
+  function leavesFiltered() {
+    let filtered = currentFilterUser === 'ALL' ? allLeaves : allLeaves.filter(l => l.uid === currentFilterUser);
+    if (currentFilterStatus !== 'ALL') {
+      filtered = filtered.filter(l => l.status === currentFilterStatus);
+    }
+    return filtered;
+  }
+
+  function renderList() {
+    const listView = document.getElementById('adminListView');
+    const tbody = document.querySelector('#adminListTable tbody');
+    if (!listView || !tbody) return;
+    tbody.innerHTML = '';
+    const rows = leavesFiltered().slice().sort((a,b) => {
+      // sort by start_date desc then id desc
+      if (a.start_date === b.start_date) return (b.id || 0) - (a.id || 0);
+      return a.start_date > b.start_date ? -1 : 1;
+    });
+    rows.forEach(l => {
+      const tr = document.createElement('tr');
+      const tdId = document.createElement('td');
+      tdId.textContent = '#' + l.id;
+      const tdUser = document.createElement('td');
+      tdUser.textContent = l.uid;
+      const tdStart = document.createElement('td');
+      tdStart.textContent = formatDateFr(l.start_date);
+      const tdEnd = document.createElement('td');
+      tdEnd.textContent = formatDateFr(l.end_date);
+      const tdType = document.createElement('td');
+      tdType.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+      const tdStatus = document.createElement('td');
+      tdStatus.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
+      tr.appendChild(tdId);
+      tr.appendChild(tdUser);
+      tr.appendChild(tdStart);
+      tr.appendChild(tdEnd);
+      tr.appendChild(tdType);
+      tr.appendChild(tdStatus);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function render() {
+    if (currentView === 'calendar') {
+      const cal = document.getElementsByClassName('talkrh-calendar')[0];
+      const list = document.getElementById('adminListView');
+      if (cal) cal.style.display = '';
+      if (list) list.style.display = 'none';
+      renderCalendar();
+    } else {
+      const cal = document.getElementsByClassName('talkrh-calendar')[0];
+      const list = document.getElementById('adminListView');
+      if (cal) cal.style.display = 'none';
+      if (list) list.style.display = '';
+      renderList();
+    }
   }
 
   function populateFilter(leaves) {
@@ -48,12 +107,12 @@
     }
     sel.onchange = () => {
       currentFilterUser = sel.value;
-      renderCalendar();
+      render();
     };
     if (selStatus) {
       selStatus.onchange = () => {
         currentFilterStatus = selStatus.value;
-        renderCalendar();
+        render();
       };
     }
   }
@@ -96,7 +155,7 @@
       badges.className = 'talkrh-badges';
       const type = document.createElement('span');
       type.className = 'talkrh-badge';
-      type.textContent = l.type === 'paid' ? 'Payé' : (l.type === 'unpaid' ? 'Non payé' : 'Maladie');
+      type.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
       const status = document.createElement('span');
       status.className = 'talkrh-badge badge-' + l.status;
       status.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
@@ -287,7 +346,7 @@
       items.forEach(l => {
         const ev = document.createElement('div');
         ev.className = 'event-badge talkrh-badge badge-' + l.status;
-        const typeLabel = l.type === 'paid' ? 'Payé' : (l.type === 'unpaid' ? 'Non payé' : 'Maladie');
+        const typeLabel = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
         const statusLabel = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
         const who = currentFilterUser === 'ALL' ? (l.uid + ' • ') : '';
         ev.textContent = who + typeLabel + ' · ' + statusLabel;
@@ -307,7 +366,7 @@
       const data = await res.json();
       allLeaves = Array.isArray(data.leaves) ? data.leaves : [];
       populateFilter(allLeaves);
-      renderCalendar();
+      render();
     } catch (e) {
       console.error('[talk_rh] admin.js: error fetching leaves', e);
     }
@@ -330,6 +389,14 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
     const openSettingsBtn = document.getElementById('openSettings');
     if (openSettingsBtn) openSettingsBtn.onclick = openSettingsModal;
+    const toggleBtn = document.getElementById('toggleView');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        currentView = currentView === 'calendar' ? 'list' : 'calendar';
+        toggleBtn.textContent = currentView === 'calendar' ? 'Vue liste' : 'Vue calendrier';
+        render();
+      });
+    }
     loadAll();
   });
 })();

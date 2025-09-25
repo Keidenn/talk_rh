@@ -39,9 +39,9 @@ class PageController extends Controller {
         $isAppAdmin = $this->groupManager->isInGroup($user->getUID(), $adminGroup);
 
         if ($isServerAdmin || $isAppAdmin) {
-            return new TemplateResponse($this->appName, 'admin', []);
+            return new TemplateResponse($this->appName, 'admin', ['isAdmin' => true]);
         }
-        return new TemplateResponse($this->appName, 'employee', []);
+        return new TemplateResponse($this->appName, 'employee', ['isAdmin' => false]);
     }
 
     /**
@@ -49,6 +49,14 @@ class PageController extends Controller {
      * @NoCSRFRequired
      */
     public function employeeView(): TemplateResponse {
-        return new TemplateResponse($this->appName, 'employee', []);
+        $user = $this->userSession->getUser();
+        $isAdmin = false;
+        if ($user !== null) {
+            $adminGroup = Application::getAdminGroupId($this->config);
+            $isServerAdmin = $this->groupManager->isAdmin($user->getUID());
+            $isAppAdmin = $this->groupManager->isInGroup($user->getUID(), $adminGroup);
+            $isAdmin = $isServerAdmin || $isAppAdmin;
+        }
+        return new TemplateResponse($this->appName, 'employee', ['isAdmin' => $isAdmin]);
     }
 }

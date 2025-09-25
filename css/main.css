@@ -195,3 +195,33 @@ div#content {
   gap: 8px;
   margin-bottom: 10px;
 }
+
+/* Side panel for admin navigation */
+.talkrh-sidepanel {
+  position: fixed;
+  top: 90px;
+  right: 16px;
+  width: 250px;
+  max-width: calc(100% - 32px);
+  z-index: 10001;
+}
+
+@media (max-width: 900px) {
+  .talkrh-sidepanel { position: static; width: 100%; margin-top: 12px; }
+}
+
+/* Simple table styles for admin list view */
+.talkrh-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.talkrh-table th, .talkrh-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--talkrh-border);
+  text-align: left;
+  font-size: 14px;
+}
+.talkrh-table thead th {
+  font-weight: 600;
+  color: var(--talkrh-muted);
+}

@@ -24,7 +24,7 @@ class LeaveService {
         private LoggerInterface $logger,
     ) {}
 
-    public function createLeave(string $uid, string $startDate, string $endDate, string $type, string $reason): array {
+    public function createLeave(string $uid, string $startDate, string $endDate, string $type, string $reason, string $dayParts = ''): array {
         $qb = $this->db->getQueryBuilder();
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
         $qb->insert('talk_rh_leaves')
@@ -34,6 +34,7 @@ class LeaveService {
                 'end_date' => $qb->createNamedParameter($endDate),
                 'type' => $qb->createNamedParameter($type),
                 'reason' => $qb->createNamedParameter($reason),
+                'day_parts' => $qb->createNamedParameter($dayParts),
                 'status' => $qb->createNamedParameter('pending'),
                 'admin_comment' => $qb->createNamedParameter(''),
                 'created_at' => $qb->createNamedParameter($now),

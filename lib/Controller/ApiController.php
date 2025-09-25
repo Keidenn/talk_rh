@@ -58,10 +58,10 @@ class ApiController extends Controller {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    public function createLeave(string $startDate, string $endDate, string $type = 'paid', string $reason = ''): JSONResponse {
+    public function createLeave(string $startDate, string $endDate, string $type = 'paid', string $reason = '', string $dayParts = ''): JSONResponse {
         $this->ensureLoggedIn();
         $user = $this->userSession->getUser();
-        $created = $this->leaveService->createLeave($user->getUID(), $startDate, $endDate, $type, $reason);
+        $created = $this->leaveService->createLeave($user->getUID(), $startDate, $endDate, $type, $reason, $dayParts);
         return new JSONResponse(['leave' => $created]);
     }
 

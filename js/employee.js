@@ -1,4 +1,9 @@
 (function() {
+  // State for pagination
+  let myLeavesData = [];
+  let empPage = 1;
+  let empPageSize = 10;
+
   function formatDateFr(iso) {
     if (!iso) return '';
     const parts = iso.split('-');
@@ -16,12 +21,42 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       console.log('[talk_rh] employee.js: fetched', Array.isArray(data.leaves) ? data.leaves.length : 'n/a', 'leaves');
-      if (!data.leaves || data.leaves.length === 0) {
-        if (empty) empty.style.display = '';
-        return;
-      }
-      if (empty) empty.style.display = 'none';
-      data.leaves.forEach(l => {
+      myLeavesData = Array.isArray(data.leaves) ? data.leaves : [];
+      renderMyLeaves();
+    } catch (e) {
+      const li = document.createElement('li');
+      li.textContent = 'Erreur lors du chargement de vos demandes: ' + e.message;
+      list.appendChild(li);
+      console.error('[talk_rh] employee.js: error fetching leaves', e);
+    }
+  }
+
+  function renderMyLeaves() {
+    const list = document.getElementById('myLeaves');
+    const empty = document.getElementById('empEmptyHint');
+    const pageInfo = document.getElementById('empPageInfo');
+    const prevBtn = document.getElementById('empPrev');
+    const nextBtn = document.getElementById('empNext');
+    if (!list) return;
+    list.innerHTML = '';
+    const total = myLeavesData.length;
+    if (total === 0) {
+      if (empty) empty.style.display = '';
+      if (pageInfo) pageInfo.textContent = 'Page 0/0';
+      if (prevBtn) prevBtn.disabled = true;
+      if (nextBtn) nextBtn.disabled = true;
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    const pages = Math.max(1, Math.ceil(total / empPageSize));
+    if (empPage > pages) empPage = pages;
+    const startIdx = (empPage - 1) * empPageSize;
+    const endIdx = Math.min(startIdx + empPageSize, total);
+    const slice = myLeavesData.slice(startIdx, endIdx);
+    if (pageInfo) pageInfo.textContent = `Page ${empPage}/${pages}`;
+    if (prevBtn) prevBtn.disabled = empPage <= 1;
+    if (nextBtn) nextBtn.disabled = empPage >= pages;
+    slice.forEach(l => {
         const li = document.createElement('li');
         li.className = 'talkrh-card';
 
@@ -37,7 +72,7 @@
         badges.className = 'talkrh-badges';
         const type = document.createElement('span');
         type.className = 'talkrh-badge';
-        type.textContent = l.type === 'paid' ? 'Payé' : (l.type === 'unpaid' ? 'Non payé' : 'Maladie');
+        type.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
         const status = document.createElement('span');
         status.className = 'talkrh-badge badge-' + l.status;
         status.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
@@ -59,7 +94,7 @@
           del.onclick = async () => {
             if (!confirm('Supprimer cette demande ?')) return;
             await fetch(OC.generateUrl('/apps/talk_rh/api/leaves/' + l.id), { method: 'DELETE' });
-            loadMyLeaves();
+            await loadMyLeaves();
           };
           actions.appendChild(del);
         }
@@ -70,12 +105,6 @@
         li.appendChild(actions);
         list.appendChild(li);
       });
-    } catch (e) {
-      const li = document.createElement('li');
-      li.textContent = 'Erreur lors du chargement de vos demandes: ' + e.message;
-      list.appendChild(li);
-      console.error('[talk_rh] employee.js: error fetching leaves', e);
-    }
   }
 
   function bindCreate() {
@@ -90,20 +119,134 @@
         alert('Merci de renseigner les dates de début et de fin.');
         return;
       }
-      const form = new FormData();
-      form.append('startDate', startDate);
-      form.append('endDate', endDate);
-      form.append('type', type);
-      form.append('reason', reason);
-      try {
-        btn.disabled = true;
-        await fetch(OC.generateUrl('/apps/talk_rh/api/leaves'), { method: 'POST', body: form });
-        await loadMyLeaves();
-        document.getElementById('reason').value = '';
-      } finally {
-        btn.disabled = false;
-      }
+      // Open modal to select day parts before sending
+      openDayPartsModal(startDate, endDate, async (dayPartsMap) => {
+        const form = new FormData();
+        form.append('startDate', startDate);
+        form.append('endDate', endDate);
+        form.append('type', type);
+        form.append('reason', reason);
+        form.append('dayParts', JSON.stringify(dayPartsMap));
+        try {
+          btn.disabled = true;
+          await fetch(OC.generateUrl('/apps/talk_rh/api/leaves'), { method: 'POST', body: form });
+          await loadMyLeaves();
+          document.getElementById('reason').value = '';
+        } finally {
+          btn.disabled = false;
+        }
+      });
     });
+  }
+
+  function eachDate(startIso, endIso) {
+    const results = [];
+    const start = new Date(startIso);
+    const end = new Date(endIso);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const y = d.getFullYear();
+      const m = (d.getMonth() + 1).toString().padStart(2, '0');
+      const day = d.getDate().toString().padStart(2, '0');
+      results.push(`${y}-${m}-${day}`);
+    }
+    return results;
+  }
+
+  function closeModal() {
+    const backdrop = document.getElementById('talkrhModalBackdrop');
+    if (backdrop) backdrop.style.display = 'none';
+  }
+
+  function openDayPartsModal(startIso, endIso, onConfirm) {
+    const backdrop = document.getElementById('talkrhModalBackdrop');
+    const titleEl = document.getElementById('talkrhModalTitle');
+    const bodyEl = document.getElementById('talkrhModalBody');
+    if (!backdrop || !titleEl || !bodyEl) return;
+    titleEl.textContent = 'Détail des journées';
+    bodyEl.innerHTML = '';
+
+    const info = document.createElement('div');
+    info.className = 'talkrh-meta';
+    info.textContent = 'Sélectionnez pour chaque jour: Journée complète, Matin, Après-midi. Utilisez "Tout sélectionner" pour appliquer à tous les jours.';
+    bodyEl.appendChild(info);
+
+    const actionsAll = document.createElement('div');
+    actionsAll.className = 'talkrh-actions';
+    const btnAllFull = document.createElement('button'); btnAllFull.textContent = 'Tout: Journée complète';
+    const btnAllAM = document.createElement('button'); btnAllAM.textContent = 'Tout: Matinée';
+    const btnAllPM = document.createElement('button'); btnAllPM.textContent = 'Tout: Après-midi';
+    actionsAll.appendChild(btnAllFull);
+    actionsAll.appendChild(btnAllAM);
+    actionsAll.appendChild(btnAllPM);
+    bodyEl.appendChild(actionsAll);
+
+    const container = document.createElement('div');
+    container.className = 'talkrh-day-details';
+    const dates = eachDate(startIso, endIso);
+    dates.forEach(dateIso => {
+      const card = document.createElement('div');
+      card.className = 'talkrh-card';
+      const title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = formatDateFr(dateIso);
+      const opts = document.createElement('div');
+      opts.className = 'talkrh-actions';
+      opts.style.flexWrap = 'wrap';
+      const mkOpt = (label, value) => {
+        const id = `dp_${dateIso}_${value}`;
+        const lbl = document.createElement('label');
+        lbl.htmlFor = id;
+        lbl.style.marginRight = '12px';
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = `dp_${dateIso}`;
+        radio.id = id;
+        radio.value = value;
+        if (value === 'full') radio.checked = true;
+        lbl.appendChild(radio);
+        const sp = document.createElement('span'); sp.textContent = ' ' + label;
+        lbl.appendChild(sp);
+        return lbl;
+      };
+      opts.appendChild(mkOpt('Journée complète', 'full'));
+      opts.appendChild(mkOpt('Matinée', 'am'));
+      opts.appendChild(mkOpt('Après-midi', 'pm'));
+      card.appendChild(title);
+      card.appendChild(opts);
+      container.appendChild(card);
+    });
+    bodyEl.appendChild(container);
+
+    const actions = document.createElement('div');
+    actions.className = 'talkrh-actions';
+    const btnConfirm = document.createElement('button'); btnConfirm.className = 'button primary'; btnConfirm.textContent = 'Confirmer';
+    const btnCancel = document.createElement('button'); btnCancel.className = 'button'; btnCancel.textContent = 'Annuler'; btnCancel.onclick = () => closeModal();
+    actions.appendChild(btnConfirm);
+    actions.appendChild(btnCancel);
+    bodyEl.appendChild(actions);
+
+    // Bulk actions
+    function setAll(value) {
+      dates.forEach(dateIso => {
+        const radios = bodyEl.querySelectorAll(`input[name="dp_${dateIso}"]`);
+        radios.forEach(r => { if (r.value === value) r.checked = true; });
+      });
+    }
+    btnAllFull.onclick = () => setAll('full');
+    btnAllAM.onclick = () => setAll('am');
+    btnAllPM.onclick = () => setAll('pm');
+
+    btnConfirm.onclick = () => {
+      const map = {};
+      dates.forEach(dateIso => {
+        const sel = bodyEl.querySelector(`input[name="dp_${dateIso}"]:checked`);
+        map[dateIso] = sel ? sel.value : 'full';
+      });
+      closeModal();
+      if (typeof onConfirm === 'function') onConfirm(map);
+    };
+
+    backdrop.style.display = 'block';
   }
 
   async function loadIcsInfo() {
@@ -154,6 +297,23 @@
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[talk_rh] employee.js: DOMContentLoaded');
     bindCreate();
+    const sizeSel = document.getElementById('empPageSize');
+    const prevBtn = document.getElementById('empPrev');
+    const nextBtn = document.getElementById('empNext');
+    if (sizeSel) {
+      sizeSel.addEventListener('change', () => {
+        empPageSize = parseInt(sizeSel.value, 10) || 10;
+        empPage = 1;
+        renderMyLeaves();
+      });
+    }
+    if (prevBtn) prevBtn.addEventListener('click', () => { if (empPage > 1) { empPage -= 1; renderMyLeaves(); } });
+    if (nextBtn) nextBtn.addEventListener('click', () => { empPage += 1; renderMyLeaves(); });
+    const closeBtn = document.getElementById('talkrhModalClose');
+    const backdrop = document.getElementById('talkrhModalBackdrop');
+    if (closeBtn) closeBtn.onclick = closeModal;
+    if (backdrop) backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
     loadMyLeaves();
     bindIcsActions();
     loadIcsInfo();
