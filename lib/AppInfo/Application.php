@@ -19,6 +19,9 @@ use OCP\IUserSession;
 use OCP\Notification\IManager as NotificationManager;
 use Psr\Log\LoggerInterface;
 use OCP\Util;
+use OCP\IUserManager;
+use OCP\Accounts\IAccountManager;
+use OCP\Http\Client\IClientService;
 
 class Application extends App {
     public const APP_ID = 'talk_rh';
@@ -31,12 +34,16 @@ class Application extends App {
         $container->registerService(LeaveService::class, function(IAppContainer $c) {
             return new LeaveService(
                 $c->query(IDBConnection::class),
+                $c->query(IRequest::class),
                 $c->query(IUserSession::class),
                 $c->query(IGroupManager::class),
                 $c->query(IConfig::class),
                 $c->query(IURLGenerator::class),
                 $c->query(NotificationManager::class),
                 $c->getServer()->get(LoggerInterface::class),
+                $c->query(IUserManager::class),
+                $c->query(IAccountManager::class),
+                $c->query(IClientService::class),
             );
         });
 
@@ -59,7 +66,10 @@ class Application extends App {
                 $c->query(LeaveService::class),
                 $c->query(IUserSession::class),
                 $c->query(IGroupManager::class),
-                $c->query(IConfig::class)
+                $c->query(IConfig::class),
+                $c->query(IUserManager::class),
+                $c->query(IAccountManager::class),
+                $c->getServer()->get(LoggerInterface::class)
             );
         });
 

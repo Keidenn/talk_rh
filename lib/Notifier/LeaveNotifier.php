@@ -40,7 +40,7 @@ class LeaveNotifier implements INotifier {
 
             $notification->setParsedSubject($label)
                 ->setParsedMessage($text)
-                ->setIcon($this->urlGenerator->imagePath('talk_rh', 'app.svg'));
+                ->setIcon($this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('talk_rh', 'app.svg')));
 
             // If not already set, point to the app index
             if ($notification->getLink() === '') {

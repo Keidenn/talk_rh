@@ -493,15 +493,6 @@
         if (listEl) listEl.classList.add('active');
       }
 
-      // Toggle sub-menu icon variants (-white for active, -dark for inactive)
-      const calIcon = document.querySelector('#nav-calendar .app-navigation-entry-icon span');
-      const listIcon = document.querySelector('#nav-list .app-navigation-entry-icon span');
-      if (calIcon) {
-        calIcon.className = (currentView === 'calendar') ? 'icon-calendar-white' : 'icon-calendar-dark';
-      }
-      if (listIcon) {
-        listIcon.className = (currentView === 'list') ? 'icon-view-module-white' : 'icon-view-module-dark';
-      }
     }
     
     // Set initial active state (after possibly reading URL param)

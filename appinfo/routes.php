@@ -21,6 +21,14 @@ return [
         ['name' => 'api#getAdminGroup', 'url' => '/api/admin/settings/group', 'verb' => 'GET'],
         ['name' => 'api#listGroups', 'url' => '/api/admin/settings/groups', 'verb' => 'GET'],
         ['name' => 'api#getAdminGroupMembers', 'url' => '/api/admin/settings/group/members', 'verb' => 'GET'],
+        ['name' => 'api#getTalkSetting', 'url' => '/api/admin/settings/talk', 'verb' => 'GET'],
+        ['name' => 'api#saveTalkSetting', 'url' => '/api/admin/settings/talk', 'verb' => 'POST'],
+        // Talk channel selection
+        ['name' => 'api#listTalkChannels', 'url' => '/api/admin/settings/talk/channels', 'verb' => 'GET'],
+        ['name' => 'api#getTalkChannel', 'url' => '/api/admin/settings/talk/channel', 'verb' => 'GET'],
+        ['name' => 'api#saveTalkChannel', 'url' => '/api/admin/settings/talk/channel', 'verb' => 'POST'],
+        // Admin test endpoint for Talk diagnostics
+        ['name' => 'api#testTalk', 'url' => '/api/admin/test/talk', 'verb' => 'POST'],
 
         // ICS feed (Calendar)
         ['name' => 'ics#feed', 'url' => '/ics/{uid}/{token}', 'verb' => 'GET'],

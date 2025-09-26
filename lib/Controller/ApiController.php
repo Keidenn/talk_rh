@@ -11,6 +11,9 @@ use OCP\IConfig;
 use OCP\IGroupManager;
 use OCP\IRequest;
 use OCP\IUserSession;
+use OCP\IUserManager;
+use OCP\Accounts\IAccountManager;
+use Psr\Log\LoggerInterface;
 
 class ApiController extends Controller {
     public function __construct(
@@ -20,6 +23,9 @@ class ApiController extends Controller {
         private IUserSession $userSession,
         private IGroupManager $groupManager,
         private IConfig $config,
+        private IUserManager $userManager,
+        private IAccountManager $accountManager,
+        private LoggerInterface $logger,
     ) {
         parent::__construct($appName, $request);
     }
@@ -82,12 +88,179 @@ class ApiController extends Controller {
      */
     public function getAllLeaves(): JSONResponse {
         $this->ensureAppAdmin();
-        $data = $this->leaveService->getAllLeaves();
+        $user = $this->userSession->getUser();
+        if ($user === null) {
+            throw new \Exception('Not logged in');
+        }
+        // Server admins can see all
+        if ($this->groupManager->isAdmin($user->getUID())) {
+            $data = $this->leaveService->getAllLeaves();
+            return new JSONResponse(['leaves' => $data]);
+        }
+        // App admins only see users for whom they are the supervisor
+        $all = $this->leaveService->getAllLeaves();
+        $superUid = $user->getUID();
+        $this->logger->debug('[talk_rh] getAllLeaves: filtering for supervisor=' . $superUid . ', total leaves=' . count($all), ['app' => 'talk_rh']);
+        $data = array_values(array_filter($all, function($row) use ($superUid) {
+            $employeeUid = isset($row['uid']) ? (string)$row['uid'] : '';
+            $isSupervisor = $employeeUid !== '' && $this->isSupervisorOf($superUid, $employeeUid);
+            if ($employeeUid !== '') {
+                $this->logger->debug('[talk_rh] getAllLeaves: checking if ' . $superUid . ' supervises ' . $employeeUid . ' => ' . ($isSupervisor ? 'YES' : 'NO'), ['app' => 'talk_rh']);
+            }
+            return $isSupervisor;
+        }));
+        $this->logger->debug('[talk_rh] getAllLeaves: returning ' . count($data) . ' filtered leaves for supervisor=' . $superUid, ['app' => 'talk_rh']);
         return new JSONResponse(['leaves' => $data]);
     }
 
     /**
-     * @NoAdminRequired
+     */
+    private function isSupervisorOf(string $supervisorUid, string $employeeUid): bool {
+        try {
+            $employee = $this->userManager->get($employeeUid);
+            if ($employee === null) {
+                $this->logger->debug('[talk_rh] isSupervisorOf: employee not found: ' . $employeeUid, ['app' => 'talk_rh']);
+                return false;
+            }
+            $account = $this->accountManager->getAccount($employee);
+            if ($account === null) {
+                $this->logger->debug('[talk_rh] isSupervisorOf: account not found for: ' . $employeeUid, ['app' => 'talk_rh']);
+                return false;
+            }
+            $this->logger->debug('[talk_rh] isSupervisorOf: checking supervisor for employee=' . $employeeUid, ['app' => 'talk_rh']);
+            // Preferred API: dedicated manager property (primary) then supervisor (secondary)
+            if (method_exists($account, 'getProperty')) {
+                if (defined('OCP\\Accounts\\IAccountManager::PROPERTY_MANAGER')) {
+                    $prop = $account->getProperty(IAccountManager::PROPERTY_MANAGER);
+                    if ($prop && method_exists($prop, 'getValue')) {
+                        $value = (string)$prop->getValue();
+                        $this->logger->debug('[talk_rh] isSupervisorOf: PROPERTY_MANAGER=' . $value . ' for employee=' . $employeeUid, ['app' => 'talk_rh']);
+                        $valUid = $this->resolveValueToUid($value);
+                        if ($valUid === $supervisorUid) {
+                            return true;
+                        }
+                    }
+                }
+                if (defined('OCP\\Accounts\\IAccountManager::PROPERTY_SUPERVISOR')) {
+                    $prop = $account->getProperty(IAccountManager::PROPERTY_SUPERVISOR);
+                    if ($prop && method_exists($prop, 'getValue')) {
+                        $value = (string)$prop->getValue();
+                        $this->logger->debug('[talk_rh] isSupervisorOf: PROPERTY_SUPERVISOR=' . $value . ' for employee=' . $employeeUid, ['app' => 'talk_rh']);
+                        $valUid = $this->resolveValueToUid($value);
+                        if ($valUid === $supervisorUid) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            // Config-based fallback: read settings/manager from user config (JSON array or scalar)
+            $cfgManagers = $this->getConfigManagerUids($employeeUid);
+            if (!empty($cfgManagers)) {
+                $this->logger->debug('[talk_rh] isSupervisorOf: config managers for employee=' . $employeeUid . ' => [' . implode(',', $cfgManagers) . ']', ['app' => 'talk_rh']);
+                if (in_array($supervisorUid, $cfgManagers, true)) {
+                    return true;
+                }
+            }
+            // Fallback: scan properties for a "manager"/"supervisor" name
+            if (method_exists($account, 'getProperties')) {
+                $this->logger->debug('[talk_rh] isSupervisorOf: scanning properties for employee=' . $employeeUid, ['app' => 'talk_rh']);
+                foreach ((array)$account->getProperties() as $p) {
+                    $name = method_exists($p, 'getName') ? (string)$p->getName() : '';
+                    if ($name !== '') {
+                        $n = strtolower($name);
+                        if ($n === 'manager' || $n === 'supervisor') {
+                            $val = method_exists($p, 'getValue') ? (string)$p->getValue() : '';
+                            $this->logger->debug('[talk_rh] isSupervisorOf: found property ' . $name . '=' . $val . ' for employee=' . $employeeUid, ['app' => 'talk_rh']);
+                            $valUid = $this->resolveValueToUid($val);
+                            if ($valUid === $supervisorUid) return true;
+                        }
+                    }
+                }
+            }
+            $this->logger->debug('[talk_rh] isSupervisorOf: no supervisor match found for employee=' . $employeeUid, ['app' => 'talk_rh']);
+        } catch (\Throwable $e) {
+            $this->logger->error('[talk_rh] isSupervisorOf failed for supervisor=' . $supervisorUid . ', employee=' . $employeeUid . ': ' . $e->getMessage(), ['app' => 'talk_rh']);
+        }
+        return false;
+    }
+
+    /**
+     * Try to resolve an arbitrary account reference to a UID.
+     * Accepts UID directly, an email address, or a display name.
+     */
+    private function resolveValueToUid(string $value): string {
+        $value = trim($value);
+        if ($value === '') return '';
+        // 1) Direct UID
+        try {
+            $u = $this->userManager->get($value);
+            if ($u !== null) return $u->getUID();
+        } catch (\Throwable $e) { /* ignore */ }
+        // 2) Email -> UID
+        try {
+            if (method_exists($this->userManager, 'getByEmail')) {
+                $byEmail = $this->userManager->getByEmail($value);
+                if (is_array($byEmail) && count($byEmail) > 0) {
+                    $first = $byEmail[0];
+                    if ($first !== null) return $first->getUID();
+                }
+            }
+        } catch (\Throwable $e) { /* ignore */ }
+        // 3) Display name search
+        try {
+            if (method_exists($this->userManager, 'searchDisplayName')) {
+                $found = $this->userManager->searchDisplayName($value, 10, 0);
+                foreach ($found as $cand) {
+                    if (strcasecmp($cand->getDisplayName(), $value) === 0) {
+                        return $cand->getUID();
+                    }
+                }
+            } else {
+                // Fallback: search all and exact-match by display name
+                $all = $this->userManager->search('');
+                foreach ($all as $cand) {
+                    if (strcasecmp($cand->getDisplayName(), $value) === 0) {
+                        return $cand->getUID();
+                    }
+                }
+            }
+        } catch (\Throwable $e) { /* ignore */ }
+        return '';
+    }
+
+    /**
+     * Read managers from user config (app 'settings', key 'manager').
+     * Value can be a JSON array of identifiers or a single identifier.
+     * Returns resolved UIDs.
+     */
+    private function getConfigManagerUids(string $employeeUid): array {
+        try {
+            $raw = $this->config->getUserValue($employeeUid, 'settings', 'manager', '');
+            if ($raw === '' || $raw === null) return [];
+            $resolved = [];
+            $decoded = null;
+            try {
+                $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\Throwable $e) {
+                // Not JSON; treat as scalar value
+            }
+            if (is_array($decoded)) {
+                foreach ($decoded as $val) {
+                    if (!is_string($val)) continue;
+                    $uid = $this->resolveValueToUid($val);
+                    if ($uid !== '') $resolved[] = $uid;
+                }
+            } else {
+                $uid = $this->resolveValueToUid((string)$raw);
+                if ($uid !== '') $resolved[] = $uid;
+            }
+            return array_values(array_unique($resolved));
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * @NoCSRFRequired
      */
     public function setLeaveStatus(int $id, string $status, string $adminComment = ''): JSONResponse {
@@ -111,9 +284,15 @@ class ApiController extends Controller {
      * @NoCSRFRequired
      */
     public function getAdminGroup(): JSONResponse {
-        $this->ensureAppAdmin();
-        $gid = Application::getAdminGroupId($this->config);
-        return new JSONResponse(['groupId' => $gid]);
+        try {
+            $this->ensureAppAdmin();
+            $gid = Application::getAdminGroupId($this->config);
+            $this->logger->debug('[talk_rh] getAdminGroup: returning groupId=' . $gid, ['app' => 'talk_rh']);
+            return new JSONResponse(['groupId' => $gid]);
+        } catch (\Throwable $e) {
+            $this->logger->error('[talk_rh] getAdminGroup failed: ' . $e->getMessage(), ['app' => 'talk_rh']);
+            return new JSONResponse(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -122,8 +301,12 @@ class ApiController extends Controller {
      */
     public function listGroups(): JSONResponse {
         $this->ensureAppAdmin();
-        // Search all groups (empty search)
-        $groups = $this->groupManager->search('');
+        // Search all groups (empty search) with a generous limit
+        if (method_exists($this->groupManager, 'search')) {
+            $groups = $this->groupManager->search('', 500, 0);
+        } else {
+            $groups = [];
+        }
         $res = [];
         foreach ($groups as $g) {
             $res[] = [
@@ -132,6 +315,82 @@ class ApiController extends Controller {
             ];
         }
         return new JSONResponse(['groups' => $res]);
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function getTalkSetting(): JSONResponse {
+        $this->ensureAppAdmin();
+        $enabled = $this->config->getAppValue(Application::APP_ID, 'talk_enabled', '0') === '1';
+        return new JSONResponse(['talkEnabled' => $enabled]);
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function saveTalkSetting(string $enabled): JSONResponse {
+        $this->ensureAppAdmin();
+        $val = ($enabled === '1' || strtolower($enabled) === 'true') ? '1' : '0';
+        $this->config->setAppValue(Application::APP_ID, 'talk_enabled', $val);
+        return new JSONResponse(['saved' => true, 'talkEnabled' => $val === '1']);
+    }
+
+    /**
+     * List multi-user Talk channels available to the current admin user.
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function listTalkChannels(): JSONResponse {
+        $this->ensureAppAdmin();
+        $channels = $this->leaveService->getTalkChannels();
+        return new JSONResponse(['channels' => $channels]);
+    }
+
+    /**
+     * Get currently selected broadcast channel token (if any).
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function getTalkChannel(): JSONResponse {
+        $this->ensureAppAdmin();
+        $token = $this->leaveService->getSelectedTalkChannelToken();
+        return new JSONResponse(['token' => $token]);
+    }
+
+    /**
+     * Save selected broadcast channel token (empty to disable broadcast).
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function saveTalkChannel(string $token = ''): JSONResponse {
+        $this->ensureAppAdmin();
+        $this->leaveService->saveSelectedTalkChannelToken($token);
+        return new JSONResponse(['saved' => true, 'token' => $token]);
+    }
+
+    /**
+     * Admin diagnostic endpoint to test Talk DM sending.
+     * Params (POST): fromUid (optional), toUid (required), message (optional)
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function testTalk(): JSONResponse {
+        try {
+            $this->ensureAppAdmin();
+            $fromUid = (string)($this->request->getParam('fromUid') ?? '');
+            $toUid = (string)($this->request->getParam('toUid') ?? '');
+            $message = (string)($this->request->getParam('message') ?? 'Message de test Talk');
+            if ($toUid === '') {
+                return new JSONResponse(['error' => 'Paramètre toUid manquant'], 400);
+            }
+            $diag = $this->leaveService->testTalkDM($fromUid, $toUid, $message);
+            return new JSONResponse(['diag' => $diag]);
+        } catch (\Throwable $e) {
+            return new JSONResponse(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**

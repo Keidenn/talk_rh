@@ -2,6 +2,7 @@
 script('talk_rh', 'admin');
 script('talk_rh', 'navigation');
 style('files', 'style');
+script('talk_rh', 'settings');
 style('talk_rh', 'main');
 
 // Set navigation context
@@ -35,100 +36,28 @@ $_['currentPage'] = 'settings';
           <button id="saveSettingsBtn" class="button primary">Enregistrer</button>
         </div>
       </div>
+
+      <div class="talkrh-card">
+        <div class="title">Intégration Talk</div>
+        <div class="talkrh-meta">Lorsque cette option est activée, une demande de congés enverra un message Talk au manager. Lorsqu'un manager valide/refuse, un message sera envoyé à l'employé.</div>
+        <div class="field">
+          <label for="talkToggle">
+            <input type="checkbox" id="talkToggle" />
+            Activer les messages Talk
+          </label>
+        </div>
+        <div class="field">
+          <label for="talkChannelSelect">Canal Talk (multi-utilisateurs)</label>
+          <select id="talkChannelSelect">
+            <option value="">Chargement...</option>
+          </select>
+          <div class="talkrh-meta">Si un canal est sélectionné, chaque nouvelle demande sera également publiée dans ce canal (en plus des messages aux managers). Laisser vide pour ne pas publier dans un canal.</div>
+        </div>
+        <div class="talkrh-actions">
+          <button id="saveTalkBtn" class="button">Sauvegarder</button>
+          <button id="saveTalkChannelBtn" class="button">Enregistrer le canal</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', async () => {
-  const groupSelect = document.getElementById('settingsGroupSelect');
-  const membersList = document.getElementById('settingsMembersList');
-  const saveBtn = document.getElementById('saveSettingsBtn');
-  
-  async function loadMembers(groupId) {
-    membersList.innerHTML = '<li>Chargement...</li>';
-    try {
-      const res = await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/group/members') + '?groupId=' + encodeURIComponent(groupId));
-      const data = await res.json();
-      const members = Array.isArray(data.members) ? data.members : [];
-      membersList.innerHTML = '';
-      if (members.length === 0) {
-        const li = document.createElement('li');
-        li.textContent = 'Aucun membre dans ce groupe.';
-        membersList.appendChild(li);
-      } else {
-        members.forEach(user => {
-          const li = document.createElement('li');
-          li.className = 'talkrh-card';
-          li.innerHTML = `
-            <div class="title">${user.displayName || user.uid}</div>
-            <div class="talkrh-meta">${user.uid}</div>
-          `;
-          membersList.appendChild(li);
-        });
-      }
-    } catch (e) {
-      membersList.innerHTML = '<li>Erreur de chargement des membres.</li>';
-    }
-  }
-  
-  try {
-    // Load current group
-    const currentRes = await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/group'));
-    const currentData = await currentRes.json();
-    const currentGroupId = currentData.groupId || '';
-    
-    // Load all groups
-    const groupsRes = await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/groups'));
-    const groupsData = await groupsRes.json();
-    const groups = Array.isArray(groupsData.groups) ? groupsData.groups : [];
-    
-    groupSelect.innerHTML = '';
-    groups.forEach(group => {
-      const option = document.createElement('option');
-      option.value = group.id;
-      option.textContent = group.displayName || group.id;
-      groupSelect.appendChild(option);
-    });
-    
-    if (currentGroupId && groups.some(g => g.id === currentGroupId)) {
-      groupSelect.value = currentGroupId;
-    }
-    
-    groupSelect.addEventListener('change', () => {
-      if (groupSelect.value) {
-        loadMembers(groupSelect.value);
-      }
-    });
-    
-    if (groupSelect.value) {
-      await loadMembers(groupSelect.value);
-    }
-    
-    saveBtn.addEventListener('click', async () => {
-      try {
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Enregistrement...';
-        const form = new FormData();
-        form.append('groupId', groupSelect.value);
-        await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/group'), { method: 'POST', body: form });
-        saveBtn.textContent = 'Enregistré !';
-        setTimeout(() => {
-          saveBtn.textContent = 'Enregistrer';
-          saveBtn.disabled = false;
-        }, 2000);
-      } catch (e) {
-        saveBtn.textContent = 'Erreur';
-        setTimeout(() => {
-          saveBtn.textContent = 'Enregistrer';
-          saveBtn.disabled = false;
-        }, 2000);
-      }
-    });
-    
-  } catch (e) {
-    groupSelect.innerHTML = '<option>Erreur de chargement</option>';
-    membersList.innerHTML = '<li>Erreur de chargement de la configuration.</li>';
-  }
-});
-</script>
