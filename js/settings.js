@@ -158,13 +158,69 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (saveTalkBtn && talkToggle) {
+    // Auto-save on switch change for better UX
+    talkToggle.addEventListener('change', async () => {
+      try {
+        if (saveTalkBtn) {
+          saveTalkBtn.disabled = true;
+          saveTalkBtn.textContent = 'Enregistrement...';
+        }
+        const desired = talkToggle.checked ? '1' : '0';
+        const form = new FormData();
+        form.append('enabled', desired);
+        const res = await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/talk'), { method: 'POST', body: form });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        // verify
+        try {
+          const verifyRes = await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/talk'));
+          if (verifyRes.ok) {
+            const verifyData = await verifyRes.json();
+            const serverVal = verifyData && verifyData.talkEnabled ? '1' : '0';
+            if (serverVal !== desired) {
+              console.warn('[talk_rh] Talk setting verification mismatch after change. desired=', desired, 'serverVal=', serverVal);
+            }
+          }
+        } catch (_) {}
+        if (saveTalkBtn) {
+          saveTalkBtn.textContent = 'Enregistré !';
+          setTimeout(() => {
+            saveTalkBtn.textContent = 'Sauvegarder';
+            saveTalkBtn.disabled = false;
+          }, 1500);
+        }
+      } catch (e) {
+        if (saveTalkBtn) {
+          saveTalkBtn.textContent = 'Erreur';
+          setTimeout(() => {
+            saveTalkBtn.textContent = 'Sauvegarder';
+            saveTalkBtn.disabled = false;
+          }, 1500);
+        }
+      }
+    });
+
     saveTalkBtn.addEventListener('click', async () => {
       try {
         saveTalkBtn.disabled = true;
         saveTalkBtn.textContent = 'Enregistrement...';
         const form = new FormData();
-        form.append('enabled', talkToggle.checked ? '1' : '0');
-        await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/talk'), { method: 'POST', body: form });
+        const desired = talkToggle.checked ? '1' : '0';
+        form.append('enabled', desired);
+        const res = await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/talk'), { method: 'POST', body: form });
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
+        }
+        // Confirm by reloading the setting
+        try {
+          const verifyRes = await fetch(OC.generateUrl('/apps/talk_rh/api/admin/settings/talk'));
+          if (verifyRes.ok) {
+            const verifyData = await verifyRes.json();
+            const serverVal = verifyData && verifyData.talkEnabled ? '1' : '0';
+            if (serverVal !== desired) {
+              console.warn('[talk_rh] Talk setting verification mismatch. desired=', desired, 'serverVal=', serverVal);
+            }
+          }
+        } catch (_) {}
         saveTalkBtn.textContent = 'Enregistré !';
         setTimeout(() => {
           saveTalkBtn.textContent = 'Sauvegarder';

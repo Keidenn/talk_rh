@@ -59,15 +59,55 @@ class ApiController extends Controller {
         $data = $this->leaveService->getLeavesForUser($user->getUID());
         return new JSONResponse(['leaves' => $data]);
     }
-
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    public function createLeave(string $startDate, string $endDate, string $type = 'paid', string $reason = '', string $dayParts = ''): JSONResponse {
+    public function listMyEmployees(): JSONResponse {
+        // Mirror calendar permissions: only app admins/managers; build from existing leaves
+        $this->ensureAppAdmin();
+        $user = $this->userSession->getUser();
+        $superUid = $user->getUID();
+        $employees = [];
+        try {
+            // Enumerate users and filter by supervisor relation
+            $candidates = method_exists($this->userManager, 'search') ? $this->userManager->search('', 2000, 0) : [];
+            foreach ($candidates as $u) {
+                $uid = $u->getUID();
+                if ($uid === $superUid) continue;
+                if ($this->isSupervisorOf($superUid, $uid)) {
+                    $employees[] = [
+                        'uid' => $uid,
+                        'displayName' => $u->getDisplayName(),
+                    ];
+                }
+            }
+            // Deduplicate just in case
+            $employees = array_values(array_unique($employees, SORT_REGULAR));
+        } catch (\Throwable $e) {
+            // ignore and return best-effort
+        }
+        return new JSONResponse(['employees' => $employees]);
+    }
+    
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function createLeave(string $startDate, string $endDate, string $type = 'paid', string $reason = '', string $dayParts = '', string $targetUid = ''): JSONResponse {
         $this->ensureLoggedIn();
         $user = $this->userSession->getUser();
-        $created = $this->leaveService->createLeave($user->getUID(), $startDate, $endDate, $type, $reason, $dayParts);
+        $creatorUid = $user->getUID();
+        $target = trim($targetUid) !== '' ? trim($targetUid) : $creatorUid;
+        if ($target !== $creatorUid) {
+            // Allow only if current user is supervisor of target (or server/app admin)
+            $isServerAdmin = $this->groupManager->isAdmin($creatorUid);
+            $isAppAdmin = $this->groupManager->isInGroup($creatorUid, Application::getAdminGroupId($this->config));
+            if (!$isServerAdmin && !$isAppAdmin && !$this->isSupervisorOf($creatorUid, $target)) {
+                return new JSONResponse(['error' => 'Vous ne pouvez pas créer une demande pour cet employé'], 403);
+            }
+        }
+        $created = $this->leaveService->createLeave($target, $startDate, $endDate, $type, $reason, $dayParts);
         return new JSONResponse(['leave' => $created]);
     }
 

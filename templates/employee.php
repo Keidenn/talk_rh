@@ -31,6 +31,12 @@ $_['currentPage'] = 'employee';
         <option value="sick">Anticipé</option>
       </select>
     </div>
+    <div class="field" id="onBehalfField" style="display:none;">
+      <label for="onBehalf">Au nom de</label>
+      <select id="onBehalf">
+        <option value="">Moi-même</option>
+      </select>
+    </div>
     <div class="field">
       <label for="reason">Raison (optionnel)</label>
       <input type="text" id="reason" placeholder="Optionnel">

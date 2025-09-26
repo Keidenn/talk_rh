@@ -34,6 +34,65 @@
     return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
 
+  // Day-parts helpers
+  function parseDayParts(dp) {
+    // Accept map { 'YYYY-MM-DD': 'full|am|pm' } or array [{date, part}] or string
+    if (!dp) return null;
+    try {
+      if (typeof dp === 'string') {
+        const s = dp.trim();
+        if (s && (s[0] === '{' || s[0] === '[')) {
+          dp = JSON.parse(s);
+        } else {
+          // Single date string means that date (rare), ignore for map
+          return null;
+        }
+      }
+      if (dp && !Array.isArray(dp) && typeof dp === 'object') {
+        // object map
+        return dp;
+      }
+      if (Array.isArray(dp)) {
+        const map = {};
+        dp.forEach(item => {
+          if (item && typeof item === 'object' && item.date) {
+            map[item.date] = item.part || 'full';
+          }
+        });
+        return map;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function eachDate(startIso, endIso) {
+    const results = [];
+    try {
+      const start = new Date(startIso);
+      const end = new Date(endIso);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const y = d.getFullYear();
+        const m = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        results.push(`${y}-${m}-${day}`);
+      }
+    } catch (_){ }
+    return results;
+  }
+
+  function getDayPartFor(leave, isoDate) {
+    const map = parseDayParts(leave.day_parts);
+    if (map && Object.prototype.hasOwnProperty.call(map, isoDate)) {
+      const p = map[isoDate];
+      if (p === 'am' || p === 'pm' || p === 'full') return p;
+    }
+    return 'full';
+  }
+
+  function labelForPart(p) {
+    return p === 'am' ? 'Matin' : (p === 'pm' ? 'Après-midi' : 'Journée complète');
+  }
+
   function leavesFiltered() {
     let filtered = currentFilterUser === 'ALL' ? allLeaves : allLeaves.filter(l => l.uid === currentFilterUser);
     if (currentFilterStatus !== 'ALL') {
@@ -101,6 +160,34 @@
       tr.appendChild(tdStatus);
       tr.appendChild(tdActions);
       tbody.appendChild(tr);
+
+      // Details row (collapsed by default)
+      const detailsTr = document.createElement('tr');
+      const detailsTd = document.createElement('td');
+      detailsTd.colSpan = 7;
+      const details = document.createElement('div');
+      details.className = 'talkrh-card list-detail';
+      const ul = document.createElement('ul');
+      ul.className = 'talkrh-list';
+      eachDate(l.start_date, l.end_date).forEach(iso => {
+        const li = document.createElement('li');
+        const part = getDayPartFor(l, iso);
+        const label = labelForPart(part);
+        const dateTxt = titleCaseFr(formatDateLongFr(iso));
+        li.textContent = dateTxt + (part !== 'full' ? ' - ' + label : '');
+        ul.appendChild(li);
+      });
+      details.appendChild(ul);
+      details.style.display = 'none';
+      detailsTd.appendChild(details);
+      detailsTr.appendChild(detailsTd);
+      tbody.appendChild(detailsTr);
+
+      // Toggle on row click (ignore clicks on buttons)
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        details.style.display = details.style.display === 'none' ? '' : 'none';
+      });
     });
   }
 
@@ -209,6 +296,25 @@
         comment.textContent = 'Commentaire: ' + l.admin_comment;
         badges.appendChild(comment);
       }
+      // Collapsible details of days
+      const toggle = document.createElement('button');
+      toggle.className = 'button';
+      toggle.textContent = 'Voir les jours';
+      const details = document.createElement('div');
+      details.style.display = 'none';
+      const ul = document.createElement('ul');
+      ul.className = 'talkrh-list';
+      eachDate(l.start_date, l.end_date).forEach(iso => {
+        const li = document.createElement('li');
+        const part = getDayPartFor(l, iso);
+        const dateTxt = titleCaseFr(formatDateLongFr(iso));
+        li.textContent = dateTxt + (part !== 'full' ? ' - ' + labelForPart(part) : '');
+        ul.appendChild(li);
+      });
+      details.appendChild(ul);
+      toggle.addEventListener('click', () => {
+        details.style.display = details.style.display === 'none' ? '' : 'none';
+      });
       const actions = document.createElement('div');
       actions.className = 'talkrh-actions';
       if (l.status === 'pending') {
@@ -241,6 +347,8 @@
       card.appendChild(head);
       card.appendChild(meta);
       card.appendChild(badges);
+      card.appendChild(toggle);
+      card.appendChild(details);
       card.appendChild(actions);
       bodyEl.appendChild(card);
     });
@@ -391,7 +499,9 @@
         const typeLabel = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
         const statusLabel = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
         const who = currentFilterUser === 'ALL' ? (l.uid + ' • ') : '';
-        ev.textContent = who + typeLabel + ' · ' + statusLabel;
+        const part = getDayPartFor(l, iso);
+        const half = part !== 'full' ? ' · ½ ' + (part === 'am' ? 'matin' : 'après-midi') : '';
+        ev.textContent = who + typeLabel + ' · ' + statusLabel + half;
         events.appendChild(ev);
       });
       cell.appendChild(events);

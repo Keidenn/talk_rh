@@ -41,9 +41,10 @@ $_['currentPage'] = 'settings';
         <div class="title">Intégration Talk</div>
         <div class="talkrh-meta">Lorsque cette option est activée, une demande de congés enverra un message Talk au manager. Lorsqu'un manager valide/refuse, un message sera envoyé à l'employé.</div>
         <div class="field">
-          <label for="talkToggle">
-            <input type="checkbox" id="talkToggle" />
-            Activer les messages Talk
+          <label class="talkrh-switch">
+            <input type="checkbox" id="talkToggle" class="talkrh-switch-input" />
+            <span class="talkrh-switch-slider" aria-hidden="true"></span>
+            <span class="talkrh-switch-text">Activer les messages Talk</span>
           </label>
         </div>
         <div class="field">

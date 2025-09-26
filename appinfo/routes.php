@@ -15,6 +15,8 @@ return [
         // Admin API
         ['name' => 'api#getAllLeaves', 'url' => '/api/admin/leaves', 'verb' => 'GET'],
         ['name' => 'api#setLeaveStatus', 'url' => '/api/admin/leaves/{id}/status', 'verb' => 'POST'],
+        // Manager endpoints
+        ['name' => 'api#listMyEmployees', 'url' => '/api/my/employees', 'verb' => 'GET'],
 
         // Settings (admin page renders via ISettings; this endpoint saves selection)
         ['name' => 'api#saveAdminGroup', 'url' => '/api/admin/settings/group', 'verb' => 'POST'],

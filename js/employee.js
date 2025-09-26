@@ -125,6 +125,8 @@
 
   function bindCreate() {
     const btn = document.getElementById('createBtn');
+    const onBehalfField = document.getElementById('onBehalfField');
+    const onBehalfSel = document.getElementById('onBehalf');
     if (!btn) return;
     btn.addEventListener('click', async () => {
       const startDate = document.getElementById('startDate').value;
@@ -143,6 +145,13 @@
         form.append('type', type);
         form.append('reason', reason);
         form.append('dayParts', JSON.stringify(dayPartsMap));
+        // If manager selected an employee, include targetUid
+        try {
+          if (onBehalfField && onBehalfField.style.display !== 'none' && onBehalfSel) {
+            const targetUid = onBehalfSel.value || '';
+            if (targetUid) form.append('targetUid', targetUid);
+          }
+        } catch (_) {}
         try {
           btn.disabled = true;
           await fetch(OC.generateUrl('/apps/talk_rh/api/leaves'), { method: 'POST', body: form });
@@ -153,6 +162,37 @@
         }
       });
     });
+  }
+
+  async function loadEmployeesIFManager() {
+    const onBehalfField = document.getElementById('onBehalfField');
+    const onBehalfSel = document.getElementById('onBehalf');
+    if (!onBehalfField || !onBehalfSel) return;
+    try {
+      const res = await fetch(OC.generateUrl('/apps/talk_rh/api/my/employees'));
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const employees = Array.isArray(data.employees) ? data.employees : [];
+      if (employees.length === 0) {
+        onBehalfField.style.display = 'none';
+        return;
+      }
+      onBehalfSel.innerHTML = '';
+      const optSelf = document.createElement('option');
+      optSelf.value = '';
+      optSelf.textContent = 'Moi-même';
+      onBehalfSel.appendChild(optSelf);
+      employees.forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp.uid;
+        opt.textContent = (emp.displayName || emp.uid) + ' (' + emp.uid + ')';
+        onBehalfSel.appendChild(opt);
+      });
+      onBehalfField.style.display = '';
+    } catch (e) {
+      // If error, keep field hidden
+      onBehalfField.style.display = 'none';
+    }
   }
 
   function eachDate(startIso, endIso) {
@@ -343,6 +383,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[talk_rh] employee.js: DOMContentLoaded');
     bindCreate();
+    loadEmployeesIFManager();
     const sizeSel = document.getElementById('empPageSize');
     const prevBtn = document.getElementById('empPrev');
     const nextBtn = document.getElementById('empNext');
