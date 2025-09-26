@@ -221,6 +221,28 @@
   margin: 0 0 8px 0;
 }
 
+ul#settingsMembersList {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+#saveSettingsBtn {
+  margin-top: 12px;
+}
+
+.settings-user-card {
+  background: var(--talkrh-bg);
+  border: 1px solid var(--talkrh-border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin-bottom: 6pw;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  width: 20%;
+  min-width: 150px;
+}
+
 .talkrh-meta {
   font-size: 13px;
   color: var(--talkrh-muted);

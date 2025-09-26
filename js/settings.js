@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         members.forEach(user => {
           const li = document.createElement('li');
-          li.className = 'talkrh-card';
+          li.className = 'settings-user-card';
           li.innerHTML = `
             <div class="title">${user.displayName || user.uid}</div>
             <div class="talkrh-meta">${user.uid}</div>
