@@ -137,6 +137,11 @@
         alert('Merci de renseigner les dates de début et de fin.');
         return;
       }
+      // Client-side guard: end must be >= start
+      if (endDate < startDate) {
+        alert('La date de fin ne peut pas être antérieure à la date de début.');
+        return;
+      }
       // Open modal to select day parts before sending
       openDayPartsModal(startDate, endDate, async (dayPartsMap) => {
         const form = new FormData();
@@ -154,7 +159,17 @@
         } catch (_) {}
         try {
           btn.disabled = true;
-          await fetch(OC.generateUrl('/apps/talk_rh/api/leaves'), { method: 'POST', body: form });
+          const res = await fetch(OC.generateUrl('/apps/talk_rh/api/leaves'), { method: 'POST', body: form });
+          if (!res.ok) {
+            try {
+              const data = await res.json();
+              const msg = (data && data.error) ? data.error : ('Erreur HTTP ' + res.status);
+              alert(msg);
+            } catch (_) {
+              alert('Erreur HTTP ' + res.status);
+            }
+            return;
+          }
           await loadMyLeaves();
           document.getElementById('reason').value = '';
         } finally {
@@ -338,6 +353,22 @@
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[talk_rh] employee.js: DOMContentLoaded');
     bindCreate();
+    // Constrain end date to be >= start date
+    try {
+      const s = document.getElementById('startDate');
+      const e = document.getElementById('endDate');
+      if (s && e) {
+        if (s.value) { e.min = s.value; }
+        s.addEventListener('change', () => {
+          e.min = s.value || '';
+          if (e.value && s.value && e.value < s.value) {
+            e.value = s.value;
+          }
+        });
+      }
+    } catch (_) {}
+    // Set page title
+    try { document.title = 'Mes congés · Talk RH'; } catch(_) {}
     // Initial bulk load with global loader
     try { if (window.talkrhLoader) window.talkrhLoader.show(); } catch(_) {}
     const sizeSel = document.getElementById('empPageSize');

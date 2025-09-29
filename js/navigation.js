@@ -7,6 +7,7 @@
       this.setupMobileToggle();
       this.setupActiveStates();
       this.setupAdminViewToggle();
+      this.setupFavicon();
     },
 
     setupMobileToggle: function() {
@@ -105,6 +106,43 @@
           e.preventDefault();
           this.setAdminViewActive('list');
         });
+      }
+    },
+
+    setupFavicon: function() {
+      try {
+        let baseHref = (typeof OC !== 'undefined' && OC.generateUrl) ? OC.generateUrl('/apps/talk_rh/img/app.svg') : '/apps/talk_rh/img/app.svg';
+        // Add light cache-busting to defeat stubborn browser caches
+        const href = baseHref + (baseHref.includes('?') ? '&' : '?') + 'v=1';
+        // Ensure our favicon link exists and points to our app icon
+        const head = document.head || document.getElementsByTagName('head')[0];
+        if (!head) return;
+        // Create/update <link rel="icon"> specifically for our app
+        let link = document.querySelector('link#talkrh-favicon');
+        if (!link) {
+          link = document.createElement('link');
+          link.id = 'talkrh-favicon';
+          link.rel = 'icon';
+          link.type = 'image/svg+xml';
+          head.appendChild(link);
+        }
+        if (link.href !== href) link.href = href;
+        // Also ensure shortcut icon for some browsers
+        let shortcut = document.querySelector('link#talkrh-favicon-shortcut');
+        if (!shortcut) {
+          shortcut = document.createElement('link');
+          shortcut.id = 'talkrh-favicon-shortcut';
+          shortcut.rel = 'shortcut icon';
+          shortcut.type = 'image/svg+xml';
+          head.appendChild(shortcut);
+        }
+        if (shortcut.href !== href) shortcut.href = href;
+        // Also update any existing generic icon links so the tab icon reflects our app
+        document.querySelectorAll('link[rel*="icon"]').forEach(el => {
+          try { el.href = href; } catch(_) {}
+        });
+      } catch (_) {
+        // ignore
       }
     },
 

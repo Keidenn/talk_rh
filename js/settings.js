@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const talkChannelSelect = document.getElementById('talkChannelSelect');
   const saveTalkChannelBtn = document.getElementById('saveTalkChannelBtn');
   if (!groupSelect || !membersList || !saveBtn) return;
+  try { document.title = 'Paramètres · Talk RH'; } catch(_) {}
 
   async function loadMembers(groupId) {
     membersList.innerHTML = '<li>Chargement...</li>';

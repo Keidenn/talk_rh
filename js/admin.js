@@ -578,6 +578,12 @@
         currentView = v;
       }
     } catch (e) { /* ignore */ }
+    function updateTitle() {
+      try {
+        document.title = (currentView === 'list') ? 'Gestion des congés · Vue liste · Talk RH' : 'Gestion des congés · Vue calendrier · Talk RH';
+      } catch(_) {}
+    }
+
     if (navViewCal) {
       navViewCal.addEventListener('click', (e) => { 
         e.preventDefault(); 
@@ -589,6 +595,7 @@
           window.history.replaceState(null, '', url);
         } catch (e) { /* ignore */ }
         updateActiveNav();
+        updateTitle();
         render(); 
       });
     }
@@ -603,6 +610,7 @@
           window.history.replaceState(null, '', url);
         } catch (e) { /* ignore */ }
         updateActiveNav();
+        updateTitle();
         render(); 
       });
     }
@@ -633,6 +641,8 @@
     
     // Set initial active state (after possibly reading URL param)
     updateActiveNav();
+    // Initial title
+    updateTitle();
     loadAll();
   });
 })();

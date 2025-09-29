@@ -107,6 +107,20 @@ class ApiController extends Controller {
                 return new JSONResponse(['error' => 'Vous ne pouvez pas créer une demande pour cet employé'], 403);
             }
         }
+        // Validate dates: ensure format and chronological order (end >= start)
+        try {
+            $sd = \DateTimeImmutable::createFromFormat('Y-m-d', $startDate);
+            $ed = \DateTimeImmutable::createFromFormat('Y-m-d', $endDate);
+        } catch (\Throwable $e) {
+            $sd = false;
+            $ed = false;
+        }
+        if ($sd === false || $ed === false) {
+            return new JSONResponse(['error' => 'Dates invalides (format attendu: YYYY-MM-DD)'], 400);
+        }
+        if ($ed < $sd) {
+            return new JSONResponse(['error' => 'La date de fin ne peut pas être antérieure à la date de début'], 400);
+        }
         $created = $this->leaveService->createLeave($target, $startDate, $endDate, $type, $reason, $dayParts);
         return new JSONResponse(['leave' => $created]);
     }
@@ -301,6 +315,7 @@ class ApiController extends Controller {
     }
 
     /**
+     * @NoAdminRequired
      * @NoCSRFRequired
      */
     public function setLeaveStatus(int $id, string $status, string $adminComment = ''): JSONResponse {
