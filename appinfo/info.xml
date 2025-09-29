@@ -4,7 +4,7 @@
   <name>Demande de congés</name>
   <summary>Gestion simple des demandes de congés</summary>
   <description>Une application Nextcloud permettant aux employés de créer des demandes de congés et aux administrateurs de les approuver ou refuser avec un commentaire optionnel.</description>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <licence>agpl</licence>
   <author>Dylan</author>
   <namespace>TalkRh</namespace>

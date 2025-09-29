@@ -310,51 +310,6 @@
     backdrop.style.display = 'block';
   }
 
-  async function loadIcsInfo() {
-    const input = document.getElementById('icsUrl');
-    if (!input) return;
-    try {
-      input.value = 'Chargement…';
-      const res = await fetch(OC.generateUrl('/apps/talk_rh/api/ics/token'));
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      input.value = data.url || '';
-    } catch (e) {
-      input.value = "Erreur de chargement de l'URL ICS";
-      console.error('[talk_rh] employee.js: error fetching ics token/url', e);
-    }
-  }
-
-  function bindIcsActions() {
-    const copyBtn = document.getElementById('copyIcsUrl');
-    const regenBtn = document.getElementById('regenIcsToken');
-    const input = document.getElementById('icsUrl');
-    if (copyBtn && input) {
-      copyBtn.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(input.value);
-          copyBtn.textContent = 'Copié!';
-          setTimeout(() => (copyBtn.textContent = 'Copier'), 1200);
-        } catch (e) {
-          alert('Impossible de copier. Copiez manuellement.');
-        }
-      });
-    }
-    if (regenBtn) {
-      regenBtn.addEventListener('click', async () => {
-        if (!confirm('Regénérer le lien ICS ? Les anciens abonnements ne se mettront plus à jour.')) return;
-        regenBtn.disabled = true;
-        try {
-          const res = await fetch(OC.generateUrl('/apps/talk_rh/api/ics/token'), { method: 'POST' });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          await loadIcsInfo();
-        } finally {
-          regenBtn.disabled = false;
-        }
-      });
-    }
-  }
-
   // Fallback for radio "card" styles: add/remove 'selected' on labels when checked
   function initRadioCards() {
     try {
@@ -403,12 +358,10 @@
     if (backdrop) backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
     initRadioCards();
-    bindIcsActions();
     // Load core data in parallel
     Promise.allSettled([
       loadEmployeesIFManager(),
       loadMyLeaves(),
-      loadIcsInfo(),
     ]).finally(() => { try { if (window.talkrhLoader) window.talkrhLoader.hide(); } catch(_) {} });
   });
 })();

@@ -44,18 +44,6 @@ $_['currentPage'] = 'employee';
     </div>
     <button id="createBtn" class="button primary">Créer</button>
   </div>
-  <div class="talkrh-card" id="icsSection">
-    <div class="title">Synchronisation Calendrier</div>
-    <div class="field">
-      <label for="icsUrl">URL ICS (lecture seule)</label>
-      <input type="text" id="icsUrl" readonly value="Chargement…">
-    </div>
-    <div class="talkrh-actions">
-      <button id="copyIcsUrl" class="button">Copier</button>
-      <button id="regenIcsToken" class="button danger">Regénérer le lien</button>
-    </div>
-    <div class="talkrh-meta">Ajoutez ce lien en abonnement ICS dans l'application Calendrier de Nextcloud pour voir vos congés approuvés.</div>
-  </div>
   <div class="talkrh-actions" style="justify-content: space-between; align-items:center; margin: 8px 0;">
     <div>
       <label for="empPageSize" style="font-size:13px; color: var(--talkrh-muted);">Affichage:</label>

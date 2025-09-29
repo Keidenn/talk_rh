@@ -32,9 +32,6 @@ return [
         // Admin test endpoint for Talk diagnostics
         ['name' => 'api#testTalk', 'url' => '/api/admin/test/talk', 'verb' => 'POST'],
 
-        // ICS feed (Calendar)
-        ['name' => 'ics#feed', 'url' => '/ics/{uid}/{token}', 'verb' => 'GET'],
-        ['name' => 'ics#getToken', 'url' => '/api/ics/token', 'verb' => 'GET'],
-        ['name' => 'ics#regenToken', 'url' => '/api/ics/token', 'verb' => 'POST'],
+        // ICS feature removed: direct calendar push is used instead
     ],
 ];

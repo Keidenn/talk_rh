@@ -306,7 +306,14 @@ class ApiController extends Controller {
     public function setLeaveStatus(int $id, string $status, string $adminComment = ''): JSONResponse {
         $this->ensureAppAdmin();
         $ok = $this->leaveService->setLeaveStatus($id, $status, $adminComment);
-        return new JSONResponse(['success' => $ok]);
+        $leave = $this->leaveService->getLeaveById($id);
+        $debug = (string)($this->request->getParam('debug') ?? '0');
+        $withDiag = ($debug === '1' || strtolower($debug) === 'true');
+        $payload = ['success' => $ok, 'leave' => $leave];
+        if ($withDiag && method_exists($this->leaveService, 'getLastCalendarDiag')) {
+            try { $payload['calendarDiag'] = $this->leaveService->getLastCalendarDiag(); } catch (\Throwable $e) {}
+        }
+        return new JSONResponse($payload);
     }
 
     /**

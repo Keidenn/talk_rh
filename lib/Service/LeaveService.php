@@ -10,12 +10,15 @@ use OCP\IGroupManager;
 use OCP\IUserSession;
 use OCP\IURLGenerator;
 use OCP\Notification\IManager as NotificationManager;
-use OCP\IUserManager;
 use OCP\Accounts\IAccountManager;
+use OCP\IUserManager;
 use OCP\Http\Client\IClientService;
 use OCP\IRequest;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use Psr\Log\LoggerInterface;
+use OCP\Calendar\IManager as CalendarManager;
+use OCP\Calendar\ICreateFromString;
+use OCP\Calendar\Exceptions\CalendarException;
 
 class LeaveService {
     public function __construct(
@@ -30,7 +33,15 @@ class LeaveService {
         private IUserManager $userManager,
         private IAccountManager $accountManager,
         private IClientService $clientService,
+        private ?CalendarManager $calendarManager = null,
     ) {}
+
+    /**
+     * Holds diagnostic information for the last calendar push attempt.
+     * Exposed via getLastCalendarDiag() for debugging.
+     * @var array<int, string>
+     */
+    private array $lastCalendarDiag = [];
 
     public function createLeave(string $uid, string $startDate, string $endDate, string $type, string $reason, string $dayParts = ''): array {
         $qb = $this->db->getQueryBuilder();
@@ -124,6 +135,350 @@ class LeaveService {
         return true;
     }
 
+    /**
+     * Create an all-day VEVENT in the user's default calendar when a leave is approved.
+     * Stores the created object URI and component UID to the DB for future updates.
+     */
+    private function pushApprovedLeaveToCalendar(array $leave): void {
+        $this->lastCalendarDiag = [];
+        $this->lastCalendarDiag[] = 'begin pushApprovedLeaveToCalendar';
+        // Avoid duplicates if already created
+        if (isset($leave['calendar_object_uri']) && is_string($leave['calendar_object_uri']) && $leave['calendar_object_uri'] !== '') {
+            $this->lastCalendarDiag[] = 'skip: already has calendar_object_uri';
+            return;
+        }
+        $uid = (string)($leave['uid'] ?? '');
+        $leaveId = (string)($leave['id'] ?? '');
+        $start = (string)($leave['start_date'] ?? ''); // YYYY-MM-DD
+        $end = (string)($leave['end_date'] ?? '');
+        if ($uid === '' || $start === '' || $end === '') return;
+        $this->logger->warning('[talk_rh] Calendar push: start leaveId=' . $leaveId . ' uid=' . $uid . ' ' . $start . '→' . $end, ['app' => Application::APP_ID]);
+        $this->lastCalendarDiag[] = 'start uid=' . $uid . ' ' . $start . '->' . $end;
+        
+        // Ensure Calendar API is available (Nextcloud >= 28 typically)
+        // Try to lazy-load the manager if DI did not provide it
+        if ($this->calendarManager === null) {
+            try { $this->calendarManager = \OC::$server->get(CalendarManager::class); } catch (\Throwable $e) { /* ignore */ }
+        }
+        if ($this->calendarManager === null || !method_exists($this->calendarManager, 'getCalendarsForPrincipal')) {
+            $this->lastCalendarDiag[] = 'calendar manager unavailable -> DAV fallback';
+            $this->logger->warning('[talk_rh] Calendar manager not available, trying DAV fallback for leaveId=' . $leaveId, ['app' => Application::APP_ID]);
+            $ok = $this->pushViaDav($uid, $leaveId, $leave);
+            if (!$ok) {
+                $this->logger->warning('[talk_rh] Calendar push failed (no manager, DAV failed) for leaveId=' . $leaveId, ['app' => Application::APP_ID]);
+                $this->lastCalendarDiag[] = 'DAV fallback failed';
+            }
+            return;
+        }
+        $principal = 'principals/users/' . $uid;
+        $calendars = $this->calendarGetList($this->calendarManager, $uid, $principal);
+        $writable = null;
+        $count = is_array($calendars) ? count($calendars) : 0;
+        $this->logger->warning('[talk_rh] Calendar manager returned ' . $count . ' calendars for ' . $uid, ['app' => Application::APP_ID]);
+        $this->lastCalendarDiag[] = 'manager calendars count=' . $count;
+        // Prefer the user's 'personal' calendar when possible
+        foreach ($calendars as $cal) {
+            if (!is_object($cal)) continue;
+            $uri = $this->calendarGetUri($cal);
+            if (($cal instanceof ICreateFromString) && strtolower($uri) === 'personal') { $writable = $cal; break; }
+        }
+        if ($writable === null) {
+            foreach ($calendars as $cal) {
+                if (is_object($cal) && ($cal instanceof ICreateFromString)) { $writable = $cal; break; }
+            }
+        }
+        if ($writable === null) {
+            $this->lastCalendarDiag[] = 'no writable calendar via manager -> DAV fallback';
+            $this->logger->warning('[talk_rh] No writable calendar via manager for ' . $uid . ', trying DAV fallback', ['app' => Application::APP_ID]);
+            $ok = $this->pushViaDav($uid, $leaveId, $leave);
+            if (!$ok) {
+                $this->logger->warning('[talk_rh] Calendar push failed (writable not found, DAV failed) for leaveId=' . $leaveId, ['app' => Application::APP_ID]);
+                $this->lastCalendarDiag[] = 'DAV fallback failed';
+            }
+            return;
+        }
+        $this->lastCalendarDiag[] = 'selected calendar uri=' . $this->calendarGetUri($writable);
+
+        // Build ICS for an all-day event spanning start..end (DTEND exclusive)
+        $startYmd = str_replace('-', '', $start);
+        $endExclusive = $this->dateAddDaysIso($end, 1);
+        $summary = 'Congé approuvé';
+        $type = (string)($leave['type'] ?? '');
+        if ($type !== '') {
+            $typeFr = $type === 'paid' ? 'Soldé' : ($type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+            $summary .= ' · ' . $typeFr;
+        }
+        $desc = '';
+        $reason = trim((string)($leave['reason'] ?? ''));
+        if ($reason !== '') { $desc = 'Raison: ' . $reason; }
+        $adminComment = trim((string)($leave['admin_comment'] ?? ''));
+        if ($adminComment !== '') { $desc .= ($desc ? "\\n" : '') . 'Commentaire: ' . $adminComment; }
+
+        $host = parse_url($this->urlGenerator->getBaseUrl(), PHP_URL_HOST) ?: 'nextcloud';
+        $componentUid = 'talk_rh-leave-' . $leaveId . '@' . $host;
+        $dtstamp = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Ymd\THis\Z');
+        $icsLines = [];
+        $icsLines[] = 'BEGIN:VCALENDAR';
+        $icsLines[] = 'VERSION:2.0';
+        $icsLines[] = 'PRODID:-//talk_rh//Nextcloud//FR';
+        $icsLines[] = 'CALSCALE:GREGORIAN';
+        $icsLines[] = 'BEGIN:VEVENT';
+        $icsLines[] = 'UID:' . $this->icsEscape($componentUid);
+        $icsLines[] = 'DTSTAMP:' . $dtstamp;
+        $icsLines[] = 'DTSTART;VALUE=DATE:' . $startYmd;
+        $icsLines[] = 'DTEND;VALUE=DATE:' . $endExclusive;
+        $icsLines[] = 'SUMMARY:' . $this->icsEscape($summary);
+        if ($desc !== '') { $icsLines[] = 'DESCRIPTION:' . $this->icsEscape($desc); }
+        $icsLines[] = 'END:VEVENT';
+        $icsLines[] = 'END:VCALENDAR';
+        $ics = implode("\r\n", $icsLines);
+
+        // Use stable file name so we can reference it later
+        $objectUri = 'talk_rh-leave-' . $leaveId . '.ics';
+        $created = false;
+        $savedUri = '';
+        if ($writable instanceof ICreateFromString) {
+            try {
+                $writable->createFromString($objectUri, $ics);
+                $created = true;
+                $savedUri = $objectUri;
+                $this->lastCalendarDiag[] = 'createFromString OK';
+            } catch (CalendarException $e) {
+                $this->lastCalendarDiag[] = 'createFromString CalendarException: ' . $e->getMessage();
+                $this->logger->warning('[talk_rh] createFromString failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            } catch (\Throwable $e) {
+                $this->lastCalendarDiag[] = 'createFromString Throwable: ' . $e->getMessage();
+                $this->logger->warning('[talk_rh] createFromString throwable: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            }
+        } else {
+            $this->lastCalendarDiag[] = 'selected calendar not ICreateFromString';
+        }
+        if (!$created) {
+            $this->lastCalendarDiag[] = 'manager create failed -> DAV fallback';
+            $ok = $this->pushViaDav($uid, $leaveId, $leave, $ics, $objectUri, $componentUid);
+            if (!$ok) {
+                $this->logger->warning('[talk_rh] Calendar push failed (manager and DAV) for leaveId=' . $leaveId, ['app' => Application::APP_ID]);
+                $this->lastCalendarDiag[] = 'DAV fallback failed';
+                return; // do not persist references on failure
+            } else {
+                $this->lastCalendarDiag[] = 'DAV fallback succeeded';
+                return; // DAV saved references; we're done
+            }
+        }
+
+        // Persist references (best-effort)
+        try {
+            $qb2 = $this->db->getQueryBuilder();
+            $qb2->update('talk_rh_leaves')
+                ->set('calendar_object_uri', $qb2->createNamedParameter($savedUri !== '' ? $savedUri : $objectUri))
+                ->set('calendar_component_uid', $qb2->createNamedParameter($componentUid))
+                ->set('updated_at', $qb2->createNamedParameter((new \DateTimeImmutable())->format('Y-m-d H:i:s')))
+                ->where($qb2->expr()->eq('id', $qb2->createNamedParameter((int)$leaveId, IQueryBuilder::PARAM_INT)))
+                ->executeStatement();
+            $this->logger->warning('[talk_rh] Calendar references saved for leaveId=' . $leaveId, ['app' => Application::APP_ID]);
+            $this->lastCalendarDiag[] = 'references saved uri=' . ($savedUri !== '' ? $savedUri : $objectUri);
+        } catch (\Throwable $e) {
+            // Columns may not exist if migration not yet applied
+            $this->logger->warning('[talk_rh] Calendar reference save skipped/failed for leaveId=' . $leaveId . ': ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            $this->lastCalendarDiag[] = 'reference save failed: ' . $e->getMessage();
+        }
+    }
+
+    private function icsEscape(string $s): string {
+        $s = str_replace('\\', '\\\\', $s);
+        $s = str_replace([",", ";"], ['\\,', '\\;'], $s);
+        $s = str_replace(["\r\n", "\n", "\r"], '\\n', $s);
+        return $s;
+    }
+
+    private function dateAddDaysIso(string $isoDate, int $days): string {
+        $d = new \DateTimeImmutable($isoDate);
+        $d = $d->modify(($days >= 0 ? '+' : '') . $days . ' day');
+        return $d->format('Ymd');
+    }
+
+    /**
+     * DAV fallback: try to PUT the ICS object into the user's default calendar.
+     * Prefers the standard 'personal' calendar, then tries to discover others.
+     */
+    private function pushViaDav(string $uid, string $leaveId, array $leave, ?string $ics = null, ?string $objectUri = null, ?string $componentUid = null): bool {
+        try {
+            if ($ics === null || $objectUri === null || $componentUid === null) {
+                // Build missing pieces from $leave
+                $start = (string)($leave['start_date'] ?? '');
+                $end = (string)($leave['end_date'] ?? '');
+                if ($start === '' || $end === '') return false;
+                $startYmd = str_replace('-', '', $start);
+                $endExclusive = $this->dateAddDaysIso($end, 1);
+                $summary = 'Congé approuvé';
+                $type = (string)($leave['type'] ?? '');
+                if ($type !== '') {
+                    $typeFr = $type === 'paid' ? 'Soldé' : ($type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+                    $summary .= ' · ' . $typeFr;
+                }
+                $desc = '';
+                $reason = trim((string)($leave['reason'] ?? ''));
+                if ($reason !== '') { $desc = 'Raison: ' . $reason; }
+                $adminComment = trim((string)($leave['admin_comment'] ?? ''));
+                if ($adminComment !== '') { $desc .= ($desc ? "\\n" : '') . 'Commentaire: ' . $adminComment; }
+                $host = parse_url($this->urlGenerator->getBaseUrl(), PHP_URL_HOST) ?: 'nextcloud';
+                $componentUid = 'talk_rh-leave-' . $leaveId . '@' . $host;
+                $dtstamp = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Ymd\THis\Z');
+                $icsLines = [
+                    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//talk_rh//Nextcloud//FR', 'CALSCALE:GREGORIAN',
+                    'BEGIN:VEVENT',
+                    'UID:' . $this->icsEscape($componentUid),
+                    'DTSTAMP:' . $dtstamp,
+                    'DTSTART;VALUE=DATE:' . $startYmd,
+                    'DTEND;VALUE=DATE:' . $endExclusive,
+                    'SUMMARY:' . $this->icsEscape($summary),
+                ];
+                if ($desc !== '') { $icsLines[] = 'DESCRIPTION:' . $this->icsEscape($desc); }
+                $icsLines[] = 'END:VEVENT';
+                $icsLines[] = 'END:VCALENDAR';
+                $ics = implode("\r\n", $icsLines);
+                $objectUri = 'talk_rh-leave-' . $leaveId . '.ics';
+            }
+
+            $base = rtrim($this->urlGenerator->getAbsoluteURL('/'), '/');
+            if (str_ends_with($base, '/index.php')) $base = substr($base, 0, -10);
+            $davBase = $base . '/remote.php/dav/calendars/' . rawurlencode($uid) . '/';
+            $client = $this->clientService->newClient();
+            $headers = $this->buildDavHeaders();
+            // Try 'personal' first
+            $target = $davBase . 'personal/' . rawurlencode($objectUri);
+            $res = $client->put($target, [ 'headers' => $headers + ['Content-Type' => 'text/calendar; charset=utf-8'], 'body' => $ics, 'http_errors' => false ]);
+            $status = $res->getStatusCode();
+            $this->logger->warning('[talk_rh] DAV PUT ' . $target . ' status=' . $status, ['app' => Application::APP_ID]);
+            $this->lastCalendarDiag[] = 'DAV PUT personal status=' . $status;
+            if ($status >= 200 && $status < 300) {
+                // Save references
+                try {
+                    $qb2 = $this->db->getQueryBuilder();
+                    $qb2->update('talk_rh_leaves')
+                        ->set('calendar_object_uri', $qb2->createNamedParameter('personal/' . $objectUri))
+                        ->set('calendar_component_uid', $qb2->createNamedParameter($componentUid))
+                        ->set('updated_at', $qb2->createNamedParameter((new \DateTimeImmutable())->format('Y-m-d H:i:s')))
+                        ->where($qb2->expr()->eq('id', $qb2->createNamedParameter((int)$leaveId, IQueryBuilder::PARAM_INT)))
+                        ->executeStatement();
+                } catch (\Throwable $e) {}
+                return true;
+            }
+            // If failed, try to discover other calendars minimally
+            $candidates = ['personal', 'default', 'contacts', 'work', 'home'];
+            foreach ($candidates as $cid) {
+                if ($cid === 'personal') continue;
+                $target = $davBase . $cid . '/' . rawurlencode($objectUri);
+                $res = $client->put($target, [ 'headers' => $headers + ['Content-Type' => 'text/calendar; charset=utf-8'], 'body' => $ics, 'http_errors' => false ]);
+                $status = $res->getStatusCode();
+                $this->logger->warning('[talk_rh] DAV PUT fallback ' . $target . ' status=' . $status, ['app' => Application::APP_ID]);
+                $this->lastCalendarDiag[] = 'DAV PUT ' . $cid . ' status=' . $status;
+                if ($status >= 200 && $status < 300) {
+                    try {
+                        $qb2 = $this->db->getQueryBuilder();
+                        $qb2->update('talk_rh_leaves')
+                            ->set('calendar_object_uri', $qb2->createNamedParameter($cid . '/' . $objectUri))
+                            ->set('calendar_component_uid', $qb2->createNamedParameter($componentUid))
+                            ->set('updated_at', $qb2->createNamedParameter((new \DateTimeImmutable())->format('Y-m-d H:i:s')))
+                            ->where($qb2->expr()->eq('id', $qb2->createNamedParameter((int)$leaveId, IQueryBuilder::PARAM_INT)))
+                            ->executeStatement();
+                    } catch (\Throwable $e) {}
+                    return true;
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('[talk_rh] DAV fallback failed for leaveId=' . $leaveId . ': ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            $this->lastCalendarDiag[] = 'DAV exception: ' . $e->getMessage();
+        }
+        return false;
+    }
+
+    /** Return last calendar push diagnostic trace. */
+    public function getLastCalendarDiag(): array {
+        return $this->lastCalendarDiag;
+    }
+
+    private function buildDavHeaders(): array {
+        $cookie = $this->request->getHeader('Cookie') ?? '';
+        $rt = method_exists($this->request, 'getRequestToken') ? (string)$this->request->getRequestToken() : '';
+        $h = [ 'Accept' => 'text/plain, text/calendar, */*' ];
+        if ($cookie !== '') $h['Cookie'] = $cookie;
+        if ($rt !== '') $h['requesttoken'] = $rt;
+        return $h;
+    }
+
+    /**
+     * Retrieve calendars for the given principal/user with broad compatibility across NC versions.
+     * @param CalendarManager $mgr
+     * @param string $uid
+     * @param string $principal e.g. 'principals/users/{uid}'
+     * @return array<int, object>
+     */
+    private function calendarGetList(CalendarManager $mgr, string $uid, string $principal): array {
+        try {
+            if (method_exists($mgr, 'getCalendarsForPrincipal')) {
+                return (array)$mgr->getCalendarsForPrincipal($principal);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('[talk_rh] calendarGetList(getCalendarsForPrincipal) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+        }
+        try {
+            if (method_exists($mgr, 'getCalendars')) {
+                // Some versions accept a principal or user id
+                return (array)$mgr->getCalendars($principal);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('[talk_rh] calendarGetList(getCalendars) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+        }
+        return [];
+    }
+
+    /**
+     * Try to read a calendar's URI/id.
+     */
+    private function calendarGetUri(object $calendar): string {
+        try { if (method_exists($calendar, 'getUri')) return (string)$calendar->getUri(); } catch (\Throwable $e) {}
+        try { if (method_exists($calendar, 'getURI')) return (string)$calendar->getURI(); } catch (\Throwable $e) {}
+        try { if (method_exists($calendar, 'getId')) return (string)$calendar->getId(); } catch (\Throwable $e) {}
+        try { if (method_exists($calendar, 'getDisplayName')) return (string)$calendar->getDisplayName(); } catch (\Throwable $e) {}
+        return '';
+    }
+
+    /**
+     * Attempt to create a calendar object using various method signatures.
+     * Returns [created:boolean, savedUri:string]
+     */
+    private function calendarCreateObject(object $calendar, string $objectUri, string $ics): array {
+        // createFromString(uri, data)
+        try {
+            if (method_exists($calendar, 'createFromString')) {
+                $calendar->createFromString($objectUri, $ics);
+                return [true, $objectUri];
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('[talk_rh] calendarCreateObject(createFromString) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+        }
+        // createCalendarObject(uri, data)
+        try {
+            if (method_exists($calendar, 'createCalendarObject')) {
+                $calendar->createCalendarObject($objectUri, $ics);
+                return [true, $objectUri];
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('[talk_rh] calendarCreateObject(createCalendarObject) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+        }
+        // add or import style
+        try {
+            if (method_exists($calendar, 'add')) {
+                $calendar->add($ics);
+                return [true, $objectUri];
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('[talk_rh] calendarCreateObject(add) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+        }
+        return [false, ''];
+    }
+
     public function getAllLeaves(): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')->from('talk_rh_leaves')->orderBy('created_at', 'DESC');
@@ -176,6 +531,14 @@ class LeaveService {
         if ($updated) {
             $this->logger->debug('notifyUserStatusChange: leave id=' . ($updated['id'] ?? 'n/a') . ' to status=' . ($updated['status'] ?? 'n/a') . ' for uid=' . ($updated['uid'] ?? 'n/a'), ['app' => Application::APP_ID]);
             $this->notifyUserStatusChange($updated);
+            // If approved, push to user's default calendar
+            try {
+                if (($updated['status'] ?? '') === 'approved') {
+                    $this->pushApprovedLeaveToCalendar($updated);
+                }
+            } catch (\Throwable $e) {
+                $this->logger->debug('Calendar push failed for leave id=' . ($updated['id'] ?? 'n/a') . ': ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            }
             // Talk: notify employee about the decision (if enabled)
             if ($this->isTalkEnabled()) {
                 try {
@@ -212,16 +575,16 @@ class LeaveService {
         $daysMd = $this->formatDayPartsMarkdown($dayParts);
         $reason = trim((string)($leave['reason'] ?? ''));
         $md = "__                                           __\n\n";
-        $md .= "# Nouvelle demande de congés\n\n";
-        $md .= "### Employé\n" . ($whoDisplay !== '' ? $whoDisplay . " (" . $who . ")" : $who) . "\n\n";
+        $md .= "### Nouvelle demande de congés\n\n";
+        $md .= "**Employé**\n" . ($whoDisplay !== '' ? $whoDisplay . " (" . $who . ")" : $who) . "\n\n";
         $startLong = $this->formatDateLongFr($start);
         $endLong = $this->formatDateLongFr($end);
-        $md .= "### Période\n$startLong → $endLong\n";
+        $md .= "**Période**\n$startLong → $endLong\n";
         if ($daysMd !== '') {
-            $md .= "\n### Jours\n" . $daysMd . "\n";
+            $md .= "\n**Jours**\n" . $daysMd . "\n";
         }
         if ($reason !== '') {
-            $md .= "\n### Motif\n" . $reason . "\n";
+            $md .= "\n**Motif**\n" . $reason . "\n";
         }
         return $md;
     }
@@ -235,17 +598,17 @@ class LeaveService {
         $statusFr = $status === 'approved' ? 'approuvée' : ($status === 'rejected' ? 'refusée' : 'mise à jour');
         $comment = trim((string)($leave['admin_comment'] ?? ''));
         $md = "__                                           __\n\n";
-        $md .= "# Statut de votre demande de congés\n\n";
-        $md .= "### Période\n$start → $end\n";
+        $md .= "### Statut de votre demande de congés\n\n";
+        $md .= "**Période**\n$start → $end\n";
         $who = (string)($leave['uid'] ?? '');
         $whoDisplay = $this->getDisplayNameSafe($who);
-        $md .= "### Employé\n" . ($whoDisplay !== '' ? $whoDisplay . " (" . $who . ")" : $who) . "\n\n";
+        $md .= "**Employé**\n" . ($whoDisplay !== '' ? $whoDisplay . " (" . $who . ")" : $who) . "\n\n";
         if ($daysMd !== '') {
-            $md .= "\n### Jours\n" . $daysMd . "\n";
+            $md .= "\n**Jours**\n" . $daysMd . "\n";
         }
-        $md .= "\n### Statut\n" . ucfirst($statusFr) . ".\n";
+        $md .= "\n**Statut**\n" . ucfirst($statusFr) . ".\n";
         if ($comment !== '') {
-            $md .= "\n### Commentaire\n" . $comment . "\n";
+            $md .= "\n**Commentaire**\n" . $comment . "\n";
         }
         return $md;
     }

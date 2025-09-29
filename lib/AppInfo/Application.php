@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace OCA\TalkRh\AppInfo;
 
 use OCA\TalkRh\Controller\ApiController;
-use OCA\TalkRh\Controller\IcsController;
 use OCA\TalkRh\Controller\PageController;
 use OCA\TalkRh\Service\LeaveService;
 use OCA\TalkRh\Notifier\LeaveNotifier;
@@ -17,6 +16,7 @@ use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
 use OCP\Notification\IManager as NotificationManager;
+use OCP\Calendar\IManager as CalendarManager;
 use Psr\Log\LoggerInterface;
 use OCP\Util;
 use OCP\IUserManager;
@@ -32,6 +32,8 @@ class Application extends App {
 
         // Services
         $container->registerService(LeaveService::class, function(IAppContainer $c) {
+            $calendarMgr = null;
+            try { $calendarMgr = $c->query(CalendarManager::class); } catch (\Throwable $e) { /* optional */ }
             return new LeaveService(
                 $c->query(IDBConnection::class),
                 $c->query(IRequest::class),
@@ -44,6 +46,7 @@ class Application extends App {
                 $c->query(IUserManager::class),
                 $c->query(IAccountManager::class),
                 $c->query(IClientService::class),
+                $calendarMgr,
             );
         });
 
@@ -73,16 +76,6 @@ class Application extends App {
             );
         });
 
-        $container->registerService(IcsController::class, function(IAppContainer $c) {
-            return new IcsController(
-                self::APP_ID,
-                $c->query(IRequest::class),
-                $c->query(IUserSession::class),
-                $c->query(IConfig::class),
-                $c->query(IURLGenerator::class),
-                $c->query(LeaveService::class),
-            );
-        });
 
         // Register LeaveNotifier as a service for DI
         $container->registerService(LeaveNotifier::class, function(IAppContainer $c) {
