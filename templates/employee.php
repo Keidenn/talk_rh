@@ -29,7 +29,7 @@ $_['currentPage'] = 'employee';
       <select id="type">
         <option value="paid">Soldé</option>
         <option value="unpaid">Sans Solde</option>
-        <option value="sick">Anticipé</option>
+        <option value="sick">Récup.</option>
       </select>
     </div>
     <div class="field" id="onBehalfField" style="display:none;">

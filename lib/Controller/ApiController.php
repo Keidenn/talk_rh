@@ -146,24 +146,9 @@ class ApiController extends Controller {
         if ($user === null) {
             throw new \Exception('Not logged in');
         }
-        // Server admins can see all
-        if ($this->groupManager->isAdmin($user->getUID())) {
-            $data = $this->leaveService->getAllLeaves();
-            return new JSONResponse(['leaves' => $data]);
-        }
-        // App admins only see users for whom they are the supervisor
-        $all = $this->leaveService->getAllLeaves();
-        $superUid = $user->getUID();
-        $this->logger->debug('[talk_rh] getAllLeaves: filtering for supervisor=' . $superUid . ', total leaves=' . count($all), ['app' => 'talk_rh']);
-        $data = array_values(array_filter($all, function($row) use ($superUid) {
-            $employeeUid = isset($row['uid']) ? (string)$row['uid'] : '';
-            $isSupervisor = $employeeUid !== '' && $this->isSupervisorOf($superUid, $employeeUid);
-            if ($employeeUid !== '') {
-                $this->logger->debug('[talk_rh] getAllLeaves: checking if ' . $superUid . ' supervises ' . $employeeUid . ' => ' . ($isSupervisor ? 'YES' : 'NO'), ['app' => 'talk_rh']);
-            }
-            return $isSupervisor;
-        }));
-        $this->logger->debug('[talk_rh] getAllLeaves: returning ' . count($data) . ' filtered leaves for supervisor=' . $superUid, ['app' => 'talk_rh']);
+        // All admins of the app (and server admins) can see all leaves
+        $data = $this->leaveService->getAllLeaves();
+        $this->logger->debug('[talk_rh] getAllLeaves: returning all leaves for admin uid=' . $user->getUID() . ', count=' . count($data), ['app' => 'talk_rh']);
         return new JSONResponse(['leaves' => $data]);
     }
 

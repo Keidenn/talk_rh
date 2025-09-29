@@ -88,7 +88,7 @@
         badges.className = 'talkrh-badges';
         const type = document.createElement('span');
         type.className = 'talkrh-badge';
-        type.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+        type.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Récup.');
         const status = document.createElement('span');
         status.className = 'talkrh-badge badge-' + l.status;
         status.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');

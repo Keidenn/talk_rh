@@ -107,7 +107,7 @@ class IcsController extends Controller {
             $endExclusive = $this->dateAddDays((string)$l['end_date'], 1);
             $summary = 'Congé approuvé';
             if (!empty($l['type'])) {
-                $typeFr = $l['type'] === 'paid' ? 'Soldé' : ($l['type'] === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+                $typeFr = $l['type'] === 'paid' ? 'Soldé' : ($l['type'] === 'unpaid' ? 'Sans Solde' : 'Récup.');
                 $summary .= ' · ' . $typeFr;
             }
             $desc = '';

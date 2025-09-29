@@ -205,7 +205,7 @@ class LeaveService {
         $summary = 'Congé approuvé';
         $type = (string)($leave['type'] ?? '');
         if ($type !== '') {
-            $typeFr = $type === 'paid' ? 'Soldé' : ($type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+            $typeFr = $type === 'paid' ? 'Soldé' : ($type === 'unpaid' ? 'Sans Solde' : 'Récup.');
             $summary .= ' · ' . $typeFr;
         }
         $desc = '';
@@ -313,7 +313,7 @@ class LeaveService {
                 $summary = 'Congé approuvé';
                 $type = (string)($leave['type'] ?? '');
                 if ($type !== '') {
-                    $typeFr = $type === 'paid' ? 'Soldé' : ($type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+                    $typeFr = $type === 'paid' ? 'Soldé' : ($type === 'unpaid' ? 'Sans Solde' : 'Récup.');
                     $summary .= ' · ' . $typeFr;
                 }
                 $desc = '';

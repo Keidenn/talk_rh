@@ -126,7 +126,7 @@
       const tdEnd = document.createElement('td');
       tdEnd.textContent = formatDateLongFr(l.end_date);
       const tdType = document.createElement('td');
-      tdType.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+      tdType.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Récup.');
       const tdStatus = document.createElement('td');
       // Wrap status in a span with badge classes
       const statusSpan = document.createElement('span');
@@ -297,7 +297,7 @@
       badges.className = 'talkrh-badges';
       const type = document.createElement('span');
       type.className = 'talkrh-badge';
-      type.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+      type.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Récup.');
       const status = document.createElement('span');
       status.className = 'talkrh-badge badge-' + l.status;
       status.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
@@ -519,7 +519,7 @@
       items.forEach(l => {
         const ev = document.createElement('div');
         ev.className = 'event-badge talkrh-badge badge-' + l.status;
-        const typeLabel = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
+        const typeLabel = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Récup.');
         const statusLabel = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
         const who = currentFilterUser === 'ALL' ? (l.uid + ' • ') : '';
         const part = getDayPartFor(l, iso);
