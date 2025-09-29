@@ -383,7 +383,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[talk_rh] employee.js: DOMContentLoaded');
     bindCreate();
-    loadEmployeesIFManager();
+    // Initial bulk load with global loader
+    try { if (window.talkrhLoader) window.talkrhLoader.show(); } catch(_) {}
     const sizeSel = document.getElementById('empPageSize');
     const prevBtn = document.getElementById('empPrev');
     const nextBtn = document.getElementById('empNext');
@@ -402,8 +403,12 @@
     if (backdrop) backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
     initRadioCards();
-    loadMyLeaves();
     bindIcsActions();
-    loadIcsInfo();
+    // Load core data in parallel
+    Promise.allSettled([
+      loadEmployeesIFManager(),
+      loadMyLeaves(),
+      loadIcsInfo(),
+    ]).finally(() => { try { if (window.talkrhLoader) window.talkrhLoader.hide(); } catch(_) {} });
   });
 })();

@@ -113,6 +113,10 @@
     });
     rows.forEach(l => {
       const tr = document.createElement('tr');
+      // Add status-based class to the main row
+      if (l.status === 'pending' || l.status === 'approved' || l.status === 'rejected') {
+        tr.classList.add('row-' + l.status);
+      }
       const tdId = document.createElement('td');
       tdId.textContent = '#' + l.id;
       const tdUser = document.createElement('td');
@@ -124,7 +128,11 @@
       const tdType = document.createElement('td');
       tdType.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Anticipé');
       const tdStatus = document.createElement('td');
-      tdStatus.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
+      // Wrap status in a span with badge classes
+      const statusSpan = document.createElement('span');
+      statusSpan.className = 'talkrh-badge badge-' + l.status;
+      statusSpan.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
+      tdStatus.appendChild(statusSpan);
       const tdActions = document.createElement('td');
       if (l.status === 'pending') {
         const approve = document.createElement('button');
@@ -134,7 +142,12 @@
         approve.onclick = async () => {
           const form = new FormData();
           form.append('status', 'approved');
-          await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves/' + l.id + '/status'), { method: 'POST', body: form });
+          try { if (window.talkrhLoader) window.talkrhLoader.show(); } catch(_) {}
+          try {
+            await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves/' + l.id + '/status'), { method: 'POST', body: form });
+          } finally {
+            try { if (window.talkrhLoader) window.talkrhLoader.hide(); } catch(_) {}
+          }
           await loadAll();
         };
         const reject = document.createElement('button');
@@ -325,7 +338,12 @@
           const form = new FormData();
           form.append('status', 'approved');
           if (comment) form.append('adminComment', comment);
-          await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves/' + l.id + '/status'), { method: 'POST', body: form });
+          try { if (window.talkrhLoader) window.talkrhLoader.show(); } catch(_) {}
+          try {
+            await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves/' + l.id + '/status'), { method: 'POST', body: form });
+          } finally {
+            try { if (window.talkrhLoader) window.talkrhLoader.hide(); } catch(_) {}
+          }
           await loadAll();
           closeModal();
         };
@@ -337,7 +355,12 @@
           const form = new FormData();
           form.append('status', 'rejected');
           if (comment) form.append('adminComment', comment);
-          await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves/' + l.id + '/status'), { method: 'POST', body: form });
+          try { if (window.talkrhLoader) window.talkrhLoader.show(); } catch(_) {}
+          try {
+            await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves/' + l.id + '/status'), { method: 'POST', body: form });
+          } finally {
+            try { if (window.talkrhLoader) window.talkrhLoader.hide(); } catch(_) {}
+          }
           await loadAll();
           closeModal();
         };
@@ -513,6 +536,7 @@
 
   async function loadAll() {
     try {
+      try { if (window.talkrhLoader) window.talkrhLoader.show(); } catch(_) {}
       const res = await fetch(OC.generateUrl('/apps/talk_rh/api/admin/leaves'));
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
@@ -521,6 +545,8 @@
       render();
     } catch (e) {
       console.error('[talk_rh] admin.js: error fetching leaves', e);
+    } finally {
+      try { if (window.talkrhLoader) window.talkrhLoader.hide(); } catch(_) {}
     }
   }
 

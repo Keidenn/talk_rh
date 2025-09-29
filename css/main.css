@@ -516,3 +516,48 @@ div#content,
   outline-offset: 2px;
 }
 .talkrh-switch-text { font-size: 14px; }
+
+/* Global Loader Overlay */
+.talkrh-loader-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,.7);
+  backdrop-filter: blur(1px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998; /* below modal (10000) */
+}
+.talkrh-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--talkrh-bg);
+  border: 1px solid var(--talkrh-border);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+}
+.talkrh-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(0,0,0,0.1);
+  border-top-color: var(--talkrh-primary);
+  border-radius: 50%;
+  animation: talkrh-spin 0.9s linear infinite;
+}
+@keyframes talkrh-spin { to { transform: rotate(360deg); } }
+.talkrh-loader-text { font-size: 14px; color: var(--talkrh-muted); }
+
+
+/* Row styles by status (admin list view) */
+.talkrh-table tr.row-pending {
+  background-color: #fff7ed66; 
+}
+.talkrh-table tr.row-approved {
+  background-color: #ecfdf566; 
+}
+.talkrh-table tr.row-rejected {
+  background-color: #fef2f28f; 
+}

@@ -1,6 +1,7 @@
 <?php
 script('talk_rh', 'admin');
 script('talk_rh', 'navigation');
+script('talk_rh', 'loader');
 style('files', 'style');
 style('talk_rh', 'main');
 
@@ -76,3 +77,6 @@ $_['currentPage'] = 'admin';
     </div>
   </div>
 </div>
+
+
+<?php include_once __DIR__ . '/partials/loader.php'; ?>

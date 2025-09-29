@@ -1,6 +1,7 @@
 <?php
 script('talk_rh', 'employee');
 script('talk_rh', 'navigation');
+script('talk_rh', 'loader');
 style('files', 'style');
 style('talk_rh', 'main');
 
@@ -83,11 +84,9 @@ $_['currentPage'] = 'employee';
   <div class="talkrh-modal" role="dialog" aria-modal="true" aria-labelledby="talkrhModalTitle">
     <div class="talkrh-modal-header">
       <h3 id="talkrhModalTitle"></h3>
-      <button id="talkrhModalClose" class="button">Fermer</button>
     </div>
     <div id="talkrhModalBody"></div>
   </div>
   </div>
 
- 
-
+<?php include_once __DIR__ . '/partials/loader.php'; ?>
