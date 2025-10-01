@@ -29,3 +29,8 @@ Table `oc_talk_rh_leaves` (préfixe `oc_` variable):
 ## Sécurité
 - Toutes les routes nécessitent un utilisateur connecté.
 - Les routes admin vérifient que l'utilisateur est admin Nextcloud OU membre du groupe défini dans les réglages de l'app.
+
+## Compatibilité
+- Notifications : Envoie de notifications via l'app Notifications
+- Talk : Demandes & retour envoyées sur Talk au supérieur défini dans les paramètres utilisateurs de nextcloud ainsi que dans un canal multi défini dans les paramètres de talk_rh
+- Calendar : Création automatique sur l'agenda des demandes validées
