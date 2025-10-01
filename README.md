@@ -7,12 +7,6 @@ Fonctionnalités:
 - Vue admin: approuver ou refuser les demandes, avec commentaire optionnel.
 - Paramètre admin: choisir le groupe dont les membres accèdent à la vue admin (par défaut: groupe Nextcloud `admin`). Les administrateurs Nextcloud sont toujours autorisés.
 
-## Installation
-1. Copier ce répertoire dans le dossier `apps/` de votre instance Nextcloud sous le nom `talk_rh`.
-2. Activer l'application "Demande de congés" depuis le menu Apps dans Nextcloud.
-3. Aller dans Réglages d'administration → Section supplémentaire → "Paramètres Demande de congés" et choisir le groupe admin si besoin.
-4. Accéder à l'app via l'URL `/apps/talk_rh/`.
-
 ## Schéma BDD
 Table `oc_talk_rh_leaves` (préfixe `oc_` variable):
 - id (int, PK, AI)
