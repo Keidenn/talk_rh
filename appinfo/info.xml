@@ -36,7 +36,9 @@
   </navigations>
 
   <screenshots>
-    <screenshot>https://raw.githubusercontent.com/Keidenn/talk_rh/main/screenshots/dashboard.png</screenshot>
-    <screenshot>https://raw.githubusercontent.com/Keidenn/talk_rh/main/screenshots/request.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/Keidenn/talk_rh/refs/heads/main/screenshots/vueadmin.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/Keidenn/talk_rh/refs/heads/main/screenshots/vueadminliste.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/Keidenn/talk_rh/refs/heads/main/screenshots/vuedemande.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/Keidenn/talk_rh/refs/heads/main/screenshots/vuedemande2.png</screenshot>
   </screenshots>
 </info>
