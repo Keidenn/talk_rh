@@ -14,7 +14,6 @@
     <nextcloud min-version="27" max-version="32"/>
     <php min-version="8.1"/>
   </dependencies>
-  <default_enable/>
   <navigations>
     <navigation>
       <name>Demande de congés</name>
