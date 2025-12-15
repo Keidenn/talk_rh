@@ -310,12 +310,24 @@ class LeaveService {
                 if ($start === '' || $end === '') return false;
                 $startYmd = str_replace('-', '', $start);
                 $endExclusive = $this->dateAddDaysIso($end, 1);
-                $summary = 'Congé approuvé';
+
+                $summary = '';
                 $type = (string)($leave['type'] ?? '');
                 if ($type !== '') {
-                    $typeFr = $type === 'paid' ? 'Soldé' : ($type === 'unpaid' ? 'Sans Solde' : 'Récup.');
-                    $summary .= ' · ' . $typeFr;
+                    $typeFr = $type === 'paid' ? 'CP' : ($type === 'unpaid' ? 'CSS' : 'RTT');
+
+                    // Defining the calendar event title
+                    $displayName = $uid; // Default value (the ID) in case the user no longer exists
+                    $user = $this->userManager->get($uid);
+                    if ($user !== null) {
+                        $displayName = $user->getDisplayName();
+                        // Get just the firstname 
+                        $parts = explode(' ', $displayName); 
+                        $displayName = $parts[0];
+                    }
+                    $summary .=  $typeFr . ' - ' . $displayName;
                 }
+
                 $desc = '';
                 $reason = trim((string)($leave['reason'] ?? ''));
                 if ($reason !== '') { $desc = 'Raison: ' . $reason; }
