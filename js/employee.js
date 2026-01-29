@@ -10,7 +10,7 @@
     if (parts.length !== 3) return iso;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
-  
+
   function formatDateLongFr(iso) {
     if (!iso) return '';
     try {
@@ -25,7 +25,7 @@
     if (!s) return s;
     return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
-  
+
   async function loadMyLeaves() {
     const list = document.getElementById('myLeaves');
     const empty = document.getElementById('empEmptyHint');
@@ -82,7 +82,7 @@
 
         const meta = document.createElement('div');
         meta.className = 'talkrh-meta';
-        meta.textContent = `${formatDateLongFr(l.start_date)} → ${formatDateLongFr(l.end_date)}` + (l.reason ? t('talk_rh', ' • Raison: ') + l.reason : '');
+        meta.textContent = `${formatDateLongFr(l.start_date)} → ${formatDateLongFr(l.end_date)}` + (l.reason ? ' • ' + t('talk_rh', 'Raison: ') + l.reason : '');
 
         const badges = document.createElement('div');
         badges.className = 'talkrh-badges';
@@ -233,7 +233,7 @@
     const titleEl = document.getElementById('talkrhModalTitle');
     const bodyEl = document.getElementById('talkrhModalBody');
     if (!backdrop || !titleEl || !bodyEl) return;
-    titleEl.textContent = 'Détail des journées';
+    titleEl.textContent = t('talk_rh', 'Détail des journées');
     bodyEl.innerHTML = '';
 
     const info = document.createElement('div');
@@ -256,7 +256,7 @@
     const dates = eachDate(startIso, endIso);
     const selected = {};
     dates.forEach(dateIso => { selected[dateIso] = 'full'; });
-    
+
     dates.forEach(dateIso => {
       const card = document.createElement('div');
       card.className = 'talkrh-card';
@@ -265,7 +265,7 @@
       title.textContent = titleCaseFr(formatDateLongFr(dateIso));
       const opts = document.createElement('div');
       opts.className = 'option-cards';
-      
+
       const mkCard = (label, value) => {
         const div = document.createElement('div');
         div.className = 'option-card' + (value === 'full' ? ' selected' : '');

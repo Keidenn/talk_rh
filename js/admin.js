@@ -139,12 +139,12 @@
       const tdEnd = document.createElement('td');
       tdEnd.textContent = formatDateLongFr(l.end_date);
       const tdType = document.createElement('td');
-      tdType.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
+      tdType.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
       const tdStatus = document.createElement('td');
       // Wrap status in a span with badge classes
       const statusSpan = document.createElement('span');
       statusSpan.className = 'talkrh-badge badge-' + l.status;
-      statusSpan.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? t('talk_rh', 'Approuvée') : t('talk_rh', 'Refusée'));
+      statusSpan.textContent = l.status === 'pending' ? t('talk_rh', 'En attente') : (l.status === 'approved' ? t('talk_rh', 'Approuvée') : t('talk_rh', 'Refusée'));
       tdStatus.appendChild(statusSpan);
       const tdActions = document.createElement('td');
       if (l.status === 'pending') {
@@ -305,7 +305,7 @@
       head.textContent = `#${l.id} • ${l.uid}`;
       const meta = document.createElement('div');
       meta.className = 'talkrh-meta';
-      meta.textContent = `${formatDateLongFr(l.start_date)} → ${formatDateLongFr(l.end_date)}` + (l.reason ? ` • ` + t('talk_rh', 'Raison') + `: ${l.reason}` : '');
+      meta.textContent = `${formatDateLongFr(l.start_date)} → ${formatDateLongFr(l.end_date)}` + (l.reason ? ' • ' + t('talk_rh', 'Raison: ') + l.reason : '');
       const badges = document.createElement('div');
       badges.className = 'talkrh-badges';
       const type = document.createElement('span');
@@ -598,9 +598,9 @@
     }
 
     if (navViewCal) {
-      navViewCal.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        currentView = 'calendar'; 
+      navViewCal.addEventListener('click', (e) => {
+        e.preventDefault();
+        currentView = 'calendar';
         // Persist view in URL
         try {
           const url = new URL(window.location.href);
@@ -609,13 +609,13 @@
         } catch (e) { /* ignore */ }
         updateActiveNav();
         updateTitle();
-        render(); 
+        render();
       });
     }
     if (navViewList) {
-      navViewList.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        currentView = 'list'; 
+      navViewList.addEventListener('click', (e) => {
+        e.preventDefault();
+        currentView = 'list';
         // Persist view in URL
         try {
           const url = new URL(window.location.href);
@@ -624,10 +624,10 @@
         } catch (e) { /* ignore */ }
         updateActiveNav();
         updateTitle();
-        render(); 
+        render();
       });
     }
-    
+
     function updateActiveNav() {
       // Ensure main admin entry stays active with more robust selector
       const adminEntry = document.querySelector('.app-navigation-entry-link[href="/apps/talk_rh/page"]');
@@ -637,10 +637,10 @@
           navEntry.classList.add('active');
         }
       }
-      
+
       // Remove active class from sub-menu items only
       document.querySelectorAll('#nav-calendar, #nav-list').forEach(el => el.classList.remove('active'));
-      
+
       // Add active class to current view
       if (currentView === 'calendar') {
         const calEl = document.getElementById('nav-calendar');
@@ -651,7 +651,7 @@
       }
 
     }
-    
+
     // Set initial active state (after possibly reading URL param)
     updateActiveNav();
     // Initial title

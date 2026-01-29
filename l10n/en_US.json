@@ -95,7 +95,6 @@
     "Gestion des congés · Vue liste · Talk RH" : "Leave management · List view · Talk HR",
     "Gestion des congés · Vue calendrier · Talk RH" : "Leave management · Calendar view · Talk HR",
     "Erreur lors du chargement de vos demandes: " : "Error loading your requests:",
-    " • Raison: " : "• Reason:",
     "Approuvée" : "Approved",
     "Refusée" : "Rejected",
     "Commentaire: " : "Comment: ",
@@ -103,6 +102,7 @@
     "Supprimer cette demande ?" : "Delete this request?",
     "Merci de renseigner les dates de début et de fin." : "Please enter the start and end dates.",
     "La date de fin ne peut pas être antérieure à la date de début." : "The end date cannot be earlier than the start date.",
+    "Détail des journées" : "Details of the days",
     "Sélectionnez pour chaque jour: Journée complète, Matin, Après-midi. Utilisez \"Tout sélectionner\" pour appliquer à tous les jours." : "Select for each day: Full day, Morning, Afternoon. Use “Select All” to apply to all days.",
     "Tout: Journée complète" : "All: Full day",
     "Tout: Matinée" : "All: Morning",
@@ -115,6 +115,15 @@
     "Enregistré !" : "Saved!",
     "Erreur" : "Error",
     "Aucun" : "None",
-    "Erreur de chargement" : "Loading error"
+    "Erreur de chargement" : "Loading error",
+    "Congé approuvé" : "Leave approved",
+    "Nouvelle demande de congés" : "New leave request",
+    "%s a créé une demande de congés du %s au %s." : "%s has created a leave request from %s to %s.",
+    "Nouvelle demande de congés du %s au %s." : "New leave request from %s to %s.",
+    "approuvée" : "approved",
+    "refusée" : "rejected",
+    "mise à jour" : "updated",
+    "Statut de votre demande" : "Status of your request",
+    "Votre demande de congés (%s → %s) a été %s." : "Your leave request (%s → %s) has been %s."
 },"pluralForm" :"nplurals=2; plural=(n != 1);"
 }
