@@ -15,7 +15,7 @@ $currentPage = $_['currentPage'] ?? 'admin';
             <div class="app-navigation-entry-icon">
               <span class="icon-category-office<?php echo ($currentPage === 'admin') ? '-white' : '-dark'; ?>"></span>
             </div>
-            <span class="app-navigation-entry__name">Vue admin</span>
+            <span class="app-navigation-entry__name"><?php p($l->t('Vue admin')); ?></span>
           </a>
         </div>
         <ul class="app-navigation-entry__children">
@@ -25,7 +25,7 @@ $currentPage = $_['currentPage'] ?? 'admin';
                 <div class="app-navigation-entry-icon">
                   <span class="icon-calendar-dark"></span>
                 </div>
-                <span class="app-navigation-entry__name">Vue calendrier</span>
+                <span class="app-navigation-entry__name"><?php p($l->t('Vue calendrier')); ?></span>
               </a>
             </div>
           </li>
@@ -35,7 +35,7 @@ $currentPage = $_['currentPage'] ?? 'admin';
                 <div class="app-navigation-entry-icon">
                   <span class="icon-toggle-filelist-dark"></span>
                 </div>
-                <span class="app-navigation-entry__name">Vue liste</span>
+                <span class="app-navigation-entry__name"><?php p($l->t('Vue liste')); ?></span>
               </a>
             </div>
           </li>
@@ -47,7 +47,7 @@ $currentPage = $_['currentPage'] ?? 'admin';
             <div class="app-navigation-entry-icon">
               <span class="icon-user<?php echo ($currentPage === 'employee') ? '-white' : '-dark'; ?>"></span>
             </div>
-            <span class="app-navigation-entry__name">Vue employé</span>
+            <span class="app-navigation-entry__name"><?php p($l->t('Vue employé')); ?></span>
           </a>
         </div>
       </li>
@@ -58,7 +58,7 @@ $currentPage = $_['currentPage'] ?? 'admin';
             <div class="app-navigation-entry-icon">
               <span class="icon-user<?php echo ($currentPage === 'employee') ? '-white' : '-dark'; ?>"></span>
             </div>
-            <span class="app-navigation-entry__name">Mes congés</span>
+            <span class="app-navigation-entry__name"><?php p($l->t('Mes congés')); ?></span>
           </a>
         </div>
       </li>
@@ -73,7 +73,7 @@ $currentPage = $_['currentPage'] ?? 'admin';
           <div class="app-navigation-entry-icon">
             <span class="icon-settings<?php echo ($currentPage === 'settings') ? '-white' : '-dark'; ?>"></span>
           </div>
-          <span class="app-navigation-entry__name">Paramètres</span>
+          <span class="app-navigation-entry__name"><?php p($l->t('Paramètres')); ?></span>
         </a>
       </div>
     </div>
