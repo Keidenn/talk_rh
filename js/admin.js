@@ -37,7 +37,7 @@
     try {
       const [y, m, d] = iso.split('-').map(x => parseInt(x, 10));
       const dt = new Date(y, (m - 1), d);
-      return new Intl.DateTimeFormat('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
+      return new Intl.DateTimeFormat(OC.getLanguage(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
     } catch (e) { return formatDateFr(iso); }
   }
 
