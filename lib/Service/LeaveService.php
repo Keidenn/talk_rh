@@ -216,7 +216,7 @@ class LeaveService {
         $summary = '';
         $type = (string)($leave['type'] ?? '');
         if ($type !== '') {
-            $typeFr = $type === 'paid' ? 'CP' : ($type === 'unpaid' ? 'CSS' : 'RTT');
+            $typeFr = $type === 'paid' ? p($l->t('CP')) : ($type === 'unpaid' ? p($l->t('CSS')) : p($l->t('RTT')));
             $summary .=  $typeFr . ' - ' . $displayName;
         }
 

@@ -127,5 +127,8 @@ OC.L10N.register(
         "mise à jour" : "updated",
         "Statut de votre demande" : "Status of your request",
         "Votre demande de congés (%s → %s) a été %s." : "Your leave request (%s → %s) has been %s.",
+        "CP" : "PTO",
+        "CSS" : "Unpaid",
+        "RTT" : "Compensatory",
 },
 "nplurals=2; plural=(n != 1);");

@@ -127,5 +127,8 @@ OC.L10N.register(
         "mise à jour" : "mise à jour",
         "Statut de votre demande" : "Statut de votre demande",
         "Votre demande de congés (%s → %s) a été %s." : "Votre demande de congés (%s → %s) a été %s.",
+        "CP" : "CP",
+        "CSS" : "CSS",
+        "RTT" : "RTT",
 },
 "nplurals=2; plural=(n != 1);");
