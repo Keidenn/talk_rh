@@ -222,9 +222,9 @@ class LeaveService {
 
         $desc = '';
         $reason = trim((string)($leave['reason'] ?? ''));
-        if ($reason !== '') { $desc = 'Raison: ' . $reason; }
+        if ($reason !== '') { $desc = p($l->t('Raison: ')) . $reason; }
         $adminComment = trim((string)($leave['admin_comment'] ?? ''));
-        if ($adminComment !== '') { $desc .= ($desc ? "\\n" : '') . 'Commentaire: ' . $adminComment; }
+        if ($adminComment !== '') { $desc .= ($desc ? "\\n" : '') . p($l->t('Commentaire: ')) . $adminComment; }
 
         $host = parse_url($this->urlGenerator->getBaseUrl(), PHP_URL_HOST) ?: 'nextcloud';
         $componentUid = 'talk_rh-leave-' . $leaveId . '@' . $host;
@@ -693,7 +693,7 @@ class LeaveService {
             }
             if (class_exists('\\IntlDateFormatter')) {
                 $fmt = new \IntlDateFormatter(
-                    'fr_FR',
+                    $this->l10n->getLanguageCode(),
                     \IntlDateFormatter::FULL,
                     \IntlDateFormatter::NONE,
                     $dt->getTimezone()->getName(),

@@ -81,7 +81,7 @@ OC.L10N.register(
         "Approuver" : "Approuver",
         "Refuser" : "Refuser",
         "Détails du {date}" : "Détails du {date}",
-        "Raison" : "Raison",
+        "Raison: " : "Raison: ",
         "Commentaire: {comment}" : "Commentaire: {comment}",
         "Voir les jours" : "Voir les jours",
         "Approuver " : "Approuver ",
