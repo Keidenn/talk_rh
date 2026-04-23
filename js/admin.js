@@ -8,7 +8,20 @@
   let currentMonth = today.getMonth(); // 0-11
   let currentView = 'calendar'; // 'calendar' | 'list'
 
-  const monthNamesFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const monthNamesFr = [
+    t('talk_rh', 'Janvier'),
+    t('talk_rh', 'Février'),
+    t('talk_rh', 'Mars'),
+    t('talk_rh', 'Avril'),
+    t('talk_rh', 'Mai'),
+    t('talk_rh', 'Juin'),
+    t('talk_rh', 'Juillet'),
+    t('talk_rh', 'Août'),
+    t('talk_rh', 'Septembre'),
+    t('talk_rh', 'Octobre'),
+    t('talk_rh', 'Novembre'),
+    t('talk_rh', 'Décembre')
+  ];
 
   // Utils
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -24,7 +37,7 @@
     try {
       const [y, m, d] = iso.split('-').map(x => parseInt(x, 10));
       const dt = new Date(y, (m - 1), d);
-      return new Intl.DateTimeFormat('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
+      return new Intl.DateTimeFormat(OC.getLanguage(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
     } catch (e) { return formatDateFr(iso); }
   }
 
@@ -90,7 +103,7 @@
   }
 
   function labelForPart(p) {
-    return p === 'am' ? 'Matin' : (p === 'pm' ? 'Après-midi' : 'Journée complète');
+    return p === 'am' ? t('talk_rh', 'Matin') : (p === 'pm' ? t('talk_rh', 'Après-midi') : t('talk_rh', 'Journée complète'));
   }
 
   function leavesFiltered() {
@@ -126,18 +139,18 @@
       const tdEnd = document.createElement('td');
       tdEnd.textContent = formatDateLongFr(l.end_date);
       const tdType = document.createElement('td');
-      tdType.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Récup.');
+      tdType.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
       const tdStatus = document.createElement('td');
       // Wrap status in a span with badge classes
       const statusSpan = document.createElement('span');
       statusSpan.className = 'talkrh-badge badge-' + l.status;
-      statusSpan.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
+      statusSpan.textContent = l.status === 'pending' ? t('talk_rh', 'En attente') : (l.status === 'approved' ? t('talk_rh', 'Approuvée') : t('talk_rh', 'Refusée'));
       tdStatus.appendChild(statusSpan);
       const tdActions = document.createElement('td');
       if (l.status === 'pending') {
         const approve = document.createElement('button');
         approve.className = 'button icon-button approve';
-        approve.title = 'Approuver';
+        approve.title = t('talk_rh', 'Approuver');
         approve.textContent = '✓';
         approve.onclick = async () => {
           const form = new FormData();
@@ -152,7 +165,7 @@
         };
         const reject = document.createElement('button');
         reject.className = 'button icon-button danger reject';
-        reject.title = 'Refuser';
+        reject.title = t('talk_rh', 'Refuser');
         reject.textContent = '✕';
         reject.onclick = async () => {
           const form = new FormData();
@@ -229,7 +242,7 @@
     sel.innerHTML = '';
     const optAll = document.createElement('option');
     optAll.value = 'ALL';
-    optAll.textContent = 'Tous les employés';
+    optAll.textContent = t('talk_rh', 'Tous les employés');
     sel.appendChild(optAll);
     leaves.forEach(l => {
       if (!seen.has(l.uid)) {
@@ -282,7 +295,7 @@
       closeModal();
       return;
     }
-    titleEl.textContent = 'Détails du ' + titleCaseFr(formatDateLongFr(iso));
+    titleEl.textContent = t('talk_rh', 'Détails du {date}', { date: titleCaseFr(formatDateLongFr(iso)) });
     bodyEl.innerHTML = '';
     items.forEach(l => {
       const card = document.createElement('div');
@@ -292,27 +305,27 @@
       head.textContent = `#${l.id} • ${l.uid}`;
       const meta = document.createElement('div');
       meta.className = 'talkrh-meta';
-      meta.textContent = `${formatDateLongFr(l.start_date)} → ${formatDateLongFr(l.end_date)}` + (l.reason ? ` • Raison: ${l.reason}` : '');
+      meta.textContent = `${formatDateLongFr(l.start_date)} → ${formatDateLongFr(l.end_date)}` + (l.reason ? ' • ' + t('talk_rh', 'Raison: ') + l.reason : '');
       const badges = document.createElement('div');
       badges.className = 'talkrh-badges';
       const type = document.createElement('span');
       type.className = 'talkrh-badge';
-      type.textContent = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Récup.');
+      type.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
       const status = document.createElement('span');
       status.className = 'talkrh-badge badge-' + l.status;
-      status.textContent = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
+      status.textContent = l.status === 'pending' ? t('talk_rh', 'En attente') : (l.status === 'approved' ? t('talk_rh', 'Approuvée') : t('talk_rh', 'Refusée'));
       badges.appendChild(type);
       badges.appendChild(status);
       if (l.admin_comment) {
         const comment = document.createElement('span');
         comment.className = 'talkrh-badge';
-        comment.textContent = 'Commentaire: ' + l.admin_comment;
+        comment.textContent = t('talk_rh', 'Commentaire: {comment}', { comment: l.admin_comment });
         badges.appendChild(comment);
       }
       // Collapsible details of days
       const toggle = document.createElement('button');
       toggle.className = 'button';
-      toggle.textContent = 'Voir les jours';
+      toggle.textContent = t('talk_rh', 'Voir les jours');
       const details = document.createElement('div');
       details.style.display = 'none';
       const ul = document.createElement('ul');
@@ -332,9 +345,9 @@
       actions.className = 'talkrh-actions';
       if (l.status === 'pending') {
         const approve = document.createElement('button');
-        approve.textContent = 'Approuver';
+        approve.textContent = t('talk_rh', 'Approuver');
         approve.onclick = async () => {
-          const comment = prompt('Commentaire (optionnel)') || '';
+          const comment = prompt(t('talk_rh', 'Commentaire (optionnel)')) || '';
           const form = new FormData();
           form.append('status', 'approved');
           if (comment) form.append('adminComment', comment);
@@ -349,9 +362,9 @@
         };
         const reject = document.createElement('button');
         reject.className = 'danger';
-        reject.textContent = 'Refuser';
+        reject.textContent = t('talk_rh', 'Refuser');
         reject.onclick = async () => {
-          const comment = prompt('Commentaire (optionnel)') || '';
+          const comment = prompt(t('talk_rh', 'Commentaire (optionnel)')) || '';
           const form = new FormData();
           form.append('status', 'rejected');
           if (comment) form.append('adminComment', comment);
@@ -384,13 +397,13 @@
     const bodyEl = document.getElementById('talkrhModalBody');
     if (!backdrop || !titleEl || !bodyEl) return;
 
-    titleEl.textContent = 'Paramètres · Groupe administrateur';
+    titleEl.textContent = t('talk_rh', 'Paramètres · Groupe administrateur');
     bodyEl.innerHTML = '';
 
     const field = document.createElement('div');
     field.className = 'field';
     const label = document.createElement('label');
-    label.textContent = 'Groupe admin';
+    label.textContent = t('talk_rh', 'Groupe admin');
     label.htmlFor = 'settingsGroupSelect';
     const select = document.createElement('select');
     select.id = 'settingsGroupSelect';
@@ -399,7 +412,7 @@
     field.appendChild(select);
 
     const membersTitle = document.createElement('h4');
-    membersTitle.textContent = 'Membres du groupe';
+    membersTitle.textContent = t('talk_rh', 'Membres du groupe');
     const membersList = document.createElement('ul');
     membersList.id = 'settingsMembersList';
     membersList.className = 'talkrh-list';
@@ -408,10 +421,10 @@
     actions.className = 'talkrh-actions';
     const saveBtn = document.createElement('button');
     saveBtn.className = 'button primary';
-    saveBtn.textContent = 'Enregistrer';
+    saveBtn.textContent = t('talk_rh', 'Enregistrer');
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'button';
-    cancelBtn.textContent = 'Annuler';
+    cancelBtn.textContent = t('talk_rh', 'Annuler');
     cancelBtn.onclick = () => closeModal();
     actions.appendChild(saveBtn);
     actions.appendChild(cancelBtn);
@@ -429,7 +442,7 @@
         const mem = Array.isArray(data.members) ? data.members : [];
         if (mem.length === 0) {
           const li = document.createElement('li');
-          li.textContent = 'Aucun membre dans ce groupe.';
+          li.textContent = t('talk_rh', 'Aucun membre dans ce groupe.');
           membersList.appendChild(li);
         } else {
           mem.forEach(u => {
@@ -440,7 +453,7 @@
         }
       } catch (e) {
         const li = document.createElement('li');
-        li.textContent = 'Erreur de chargement des membres.';
+        li.textContent = t('talk_rh', 'Erreur de chargement des membres.');
         membersList.appendChild(li);
       }
     }
@@ -475,7 +488,7 @@
       };
     } catch (e) {
       const li = document.createElement('div');
-      li.textContent = 'Erreur de chargement de la configuration.';
+      li.textContent = t('talk_rh', 'Erreur de chargement de la configuration.');
       bodyEl.appendChild(li);
     }
 
@@ -519,11 +532,11 @@
       items.forEach(l => {
         const ev = document.createElement('div');
         ev.className = 'event-badge talkrh-badge badge-' + l.status;
-        const typeLabel = l.type === 'paid' ? 'Soldé' : (l.type === 'unpaid' ? 'Sans Solde' : 'Récup.');
-        const statusLabel = l.status === 'pending' ? 'En attente' : (l.status === 'approved' ? 'Approuvée' : 'Refusée');
+        const typeLabel = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
+        const statusLabel = l.status === 'pending' ? t('talk_rh', 'En attente') : (l.status === 'approved' ? t('talk_rh', 'Approuvée') : t('talk_rh', 'Refusée'));
         const who = currentFilterUser === 'ALL' ? (l.uid + ' • ') : '';
         const part = getDayPartFor(l, iso);
-        const half = part !== 'full' ? ' · ½ ' + (part === 'am' ? 'matin' : 'après-midi') : '';
+        const half = part !== 'full' ? ' · ½ ' + (part === 'am' ? t('talk_rh', 'matin') : t('talk_rh', 'après-midi')) : '';
         ev.textContent = who + typeLabel + ' · ' + statusLabel + half;
         events.appendChild(ev);
       });
@@ -580,14 +593,14 @@
     } catch (e) { /* ignore */ }
     function updateTitle() {
       try {
-        document.title = (currentView === 'list') ? 'Gestion des congés · Vue liste · Talk RH' : 'Gestion des congés · Vue calendrier · Talk RH';
+        document.title = (currentView === 'list') ? t('talk_rh', 'Gestion des congés · Vue liste · Talk RH') : t('talk_rh', 'Gestion des congés · Vue calendrier · Talk RH');
       } catch(_) {}
     }
 
     if (navViewCal) {
-      navViewCal.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        currentView = 'calendar'; 
+      navViewCal.addEventListener('click', (e) => {
+        e.preventDefault();
+        currentView = 'calendar';
         // Persist view in URL
         try {
           const url = new URL(window.location.href);
@@ -596,13 +609,13 @@
         } catch (e) { /* ignore */ }
         updateActiveNav();
         updateTitle();
-        render(); 
+        render();
       });
     }
     if (navViewList) {
-      navViewList.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        currentView = 'list'; 
+      navViewList.addEventListener('click', (e) => {
+        e.preventDefault();
+        currentView = 'list';
         // Persist view in URL
         try {
           const url = new URL(window.location.href);
@@ -611,10 +624,10 @@
         } catch (e) { /* ignore */ }
         updateActiveNav();
         updateTitle();
-        render(); 
+        render();
       });
     }
-    
+
     function updateActiveNav() {
       // Ensure main admin entry stays active with more robust selector
       const adminEntry = document.querySelector('.app-navigation-entry-link[href="/apps/talk_rh/page"]');
@@ -624,10 +637,10 @@
           navEntry.classList.add('active');
         }
       }
-      
+
       // Remove active class from sub-menu items only
       document.querySelectorAll('#nav-calendar, #nav-list').forEach(el => el.classList.remove('active'));
-      
+
       // Add active class to current view
       if (currentView === 'calendar') {
         const calEl = document.getElementById('nav-calendar');
@@ -638,7 +651,7 @@
       }
 
     }
-    
+
     // Set initial active state (after possibly reading URL param)
     updateActiveNav();
     // Initial title
