@@ -118,15 +118,19 @@
     "Erreur de chargement" : "Erreur de chargement",
     "Congé approuvé" : "Leave approved",
     "Nouvelle demande de congés" : "Nouvelle demande de congés",
-    "%s a créé une demande de congés du %s au %s." : "%s a créé une demande de congés du %s au %s.",
-    "Nouvelle demande de congés du %s au %s." : "Nouvelle demande de congés du %s au %s.",
+    "%1$s a créé une demande de congés du %2$s au %3$s." : "%1$s a créé une demande de congés du %2$s au %3$s.",
+    "Nouvelle demande de congés du %1$s au %2$s." : "Nouvelle demande de congés du %1$s au %2$s.",
     "approuvée" : "approuvée",
     "refusée" : "refusée",
     "mise à jour" : "mise à jour",
     "Statut de votre demande" : "Statut de votre demande",
-    "Votre demande de congés (%s → %s) a été %s." : "Votre demande de congés (%s → %s) a été %s.",
+    "Votre demande de congés (%1$s → %2$s) a été %3$s." : "Votre demande de congés (%1$s → %2$s) a été %3$s.",
+    "Congé annulé" : "Congé annulé",
+    "%1$s a annulé son congé validé du %2$s au %3$s." : "%1$s a annulé son congé validé du %2$s au %3$s.",
+    "Un congé validé du %1$s au %2$s a été annulé par l'employé." : "Un congé validé du %1$s au %2$s a été annulé par l'employé.",
     "CP" : "CP",
     "CSS" : "CSS",
-    "RTT" : "RTT"
+    "RTT" : "RTT",
+    "Révision" : "Révision"
 },"pluralForm" :"nplurals=2; plural=(n != 1);"
 }

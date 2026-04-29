@@ -30,6 +30,7 @@ $_['currentPage'] = 'employee';
         <option value="paid"><?php p($l->t('Soldé')); ?></option>
         <option value="unpaid"><?php p($l->t('Sans Solde')); ?></option>
         <option value="sick"><?php p($l->t('Récup.')); ?></option>
+        <option value="revision"><?php p($l->t('Révision')); ?></option>
       </select>
     </div>
     <div class="field" id="onBehalfField" style="display:none;">

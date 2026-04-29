@@ -22,6 +22,7 @@ use OCP\Util;
 use OCP\IUserManager;
 use OCP\Accounts\IAccountManager;
 use OCP\Http\Client\IClientService;
+use OCP\IL10N;
 
 class Application extends App {
     public const APP_ID = 'talk_rh';
@@ -46,6 +47,7 @@ class Application extends App {
                 $c->query(IUserManager::class),
                 $c->query(IAccountManager::class),
                 $c->query(IClientService::class),
+                $c->query(IL10N::class),
                 $calendarMgr,
             );
         });
@@ -80,7 +82,8 @@ class Application extends App {
         // Register LeaveNotifier as a service for DI
         $container->registerService(LeaveNotifier::class, function(IAppContainer $c) {
             return new LeaveNotifier(
-                $c->query(IURLGenerator::class)
+                $c->query(IURLGenerator::class),
+                $c->query(IL10N::class)
             );
         });
 

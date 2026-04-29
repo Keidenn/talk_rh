@@ -14,6 +14,7 @@ use OCP\IConfig;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
+use OCP\IL10N;
 
 class IcsController extends Controller {
     public function __construct(
@@ -23,6 +24,7 @@ class IcsController extends Controller {
         private IConfig $config,
         private IURLGenerator $urlGenerator,
         private LeaveService $leaveService,
+        private IL10N $l10n,
     ) {
         parent::__construct($appName, $request);
     }
@@ -101,23 +103,23 @@ class IcsController extends Controller {
         $lines[] = 'CALSCALE:GREGORIAN';
         $lines[] = 'METHOD:PUBLISH';
 
-        foreach ($leaves as $l) {
-            $start = str_replace('-', '', (string)$l['start_date']); // YYYYMMDD
+        foreach ($leaves as $leave) {
+            $start = str_replace('-', '', (string)$leave['start_date']); // YYYYMMDD
             // DTEND is exclusive; add 1 day to end_date for all-day event
-            $endExclusive = $this->dateAddDays((string)$l['end_date'], 1);
-            $summary = p($l->t('Congé approuvé'));
-            if (!empty($l['type'])) {
-                $typeFr = $l['type'] === 'paid' ? p($l->t('Soldé')) : ($l['type'] === 'unpaid' ? p($l->t('Sans Solde')) : p($l->t('Récup.')));
+            $endExclusive = $this->dateAddDays((string)$leave['end_date'], 1);
+            $summary = $this->l10n->t('Congé approuvé');
+            if (!empty($leave['type'])) {
+                $typeFr = $leave['type'] === 'paid' ? $this->l10n->t('Soldé') : ($leave['type'] === 'unpaid' ? $this->l10n->t('Sans Solde') : ($leave['type'] === 'revision' ? $this->l10n->t('Révision') : $this->l10n->t('Récup.')));
                 $summary .= ' · ' . $typeFr;
             }
             $desc = '';
-            if (!empty($l['reason'])) {
-                $desc = t('talk_rh', 'Raison: ') . (string)$l['reason'];
+            if (!empty($leave['reason'])) {
+                $desc = $this->l10n->t('Raison: ') . (string)$leave['reason'];
             }
-            if (!empty($l['admin_comment'])) {
-                $desc .= ($desc ? "\\n" : '') . p($l->t('Commentaire: ')) . (string)$l['admin_comment'];
+            if (!empty($leave['admin_comment'])) {
+                $desc .= ($desc ? "\\n" : '') . $this->l10n->t('Commentaire: ') . (string)$leave['admin_comment'];
             }
-            $uidLine = 'talk_rh-leave-' . (string)$l['id'] . '@' . parse_url($this->urlGenerator->getBaseUrl(), PHP_URL_HOST);
+            $uidLine = 'talk_rh-leave-' . (string)$leave['id'] . '@' . parse_url($this->urlGenerator->getBaseUrl(), PHP_URL_HOST);
 
             $lines[] = 'BEGIN:VEVENT';
             $lines[] = 'UID:' . $this->icsEscape($uidLine);

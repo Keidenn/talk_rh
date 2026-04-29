@@ -130,6 +130,7 @@ OC.L10N.register(
         "CP" : "PTO",
         "CSS" : "Unpaid",
         "RTT" : "Compensatory",
+        "Révision" : "Study leave",
         "Congé annulé" : "Leave canceled",
         "%s a annulé son congé validé du %s au %s." : "%s has canceled their approved leave from %s to %s.",
         "Un congé validé du %s au %s a été annulé par l'employé." : "An approved leave from %s to %s has been canceled by the employee.",
