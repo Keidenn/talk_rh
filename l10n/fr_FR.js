@@ -130,5 +130,9 @@ OC.L10N.register(
         "CP" : "CP",
         "CSS" : "CSS",
         "RTT" : "RTT",
+        "Congé annulé" : "Congé annulé",
+        "%s a annulé son congé validé du %s au %s." : "%s a annulé son congé validé du %s au %s.",
+        "Un congé validé du %s au %s a été annulé par l'employé." : "Un congé validé du %s au %s a été annulé par l'employé.",
+        "Supprimer ce congé validé ? Votre manager sera notifié de cette annulation." : "Supprimer ce congé validé ? Votre manager sera notifié de cette annulation.",
 },
 "nplurals=2; plural=(n != 1);");

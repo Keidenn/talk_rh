@@ -130,5 +130,9 @@ OC.L10N.register(
         "CP" : "AL",
         "CSS" : "Unpaid",
         "RTT" : "TOIL",
+        "Congé annulé" : "Leave cancelled",
+        "%s a annulé son congé validé du %s au %s." : "%s has cancelled their approved leave from %s to %s.",
+        "Un congé validé du %s au %s a été annulé par l'employé." : "An approved leave from %s to %s has been cancelled by the employee.",
+        "Supprimer ce congé validé ? Votre manager sera notifié de cette annulation." : "Delete this approved leave? Your manager will be notified of this cancellation.",
 },
 "nplurals=2; plural=(n != 1);");

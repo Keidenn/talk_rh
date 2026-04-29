@@ -103,12 +103,15 @@
 
         const actions = document.createElement('div');
         actions.className = 'talkrh-actions';
-        if (l.status === 'pending') {
+        if (l.status === 'pending' || l.status === 'approved') {
           const del = document.createElement('button');
           del.className = 'danger';
           del.textContent = t('talk_rh', 'Supprimer');
           del.onclick = async () => {
-            if (!confirm(t('talk_rh', 'Supprimer cette demande ?'))) return;
+            const confirmMsg = l.status === 'approved'
+              ? t('talk_rh', 'Supprimer ce congé validé ? Votre manager sera notifié de cette annulation.')
+              : t('talk_rh', 'Supprimer cette demande ?');
+            if (!confirm(confirmMsg)) return;
             await fetch(OC.generateUrl('/apps/talk_rh/api/leaves/' + l.id), { method: 'DELETE' });
             await loadMyLeaves();
           };

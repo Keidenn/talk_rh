@@ -125,14 +125,85 @@ class LeaveService {
         if (!$leave || $leave['uid'] !== $uid) {
             return false;
         }
-        if ($leave['status'] !== 'pending') {
-            return false; // cannot delete once approved/rejected
-        }
+        $wasApproved = ($leave['status'] === 'approved');
         $qb = $this->db->getQueryBuilder();
         $qb->delete('talk_rh_leaves')
             ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
             ->executeStatement();
+
+        // Notify managers when an approved leave is deleted by the employee
+        if ($wasApproved) {
+            $this->notifyManagersLeaveDeleted($leave);
+        }
         return true;
+    }
+
+    private function notifyManagersLeaveDeleted(array $leave): void {
+        $employeeUid = (string)($leave['uid'] ?? '');
+        if ($employeeUid === '') return;
+
+        $managers = $this->getManagerUidsFor($employeeUid);
+
+        // Notification Nextcloud
+        try {
+            $link = $this->urlGenerator->linkToRoute('talk_rh.page.index');
+            foreach ($managers as $mUid) {
+                if ($mUid === '' || $mUid === $employeeUid) continue;
+                $n = $this->notificationManager->createNotification();
+                $n->setApp(Application::APP_ID)
+                    ->setUser($mUid)
+                    ->setDateTime(new \DateTime())
+                    ->setSubject('leave_deleted_by_employee', [
+                        'uid' => $employeeUid,
+                        'start' => $leave['start_date'] ?? '',
+                        'end' => $leave['end_date'] ?? '',
+                    ])
+                    ->setObject('leave', (string)($leave['id'] ?? ''))
+                    ->setLink($link);
+                $this->notificationManager->notify($n);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->debug('Notification (leave deleted) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+        }
+
+        // Talk message
+        if ($this->isTalkEnabled()) {
+            try {
+                $msg = $this->formatTalkMsgLeaveDeleted($leave);
+                foreach ($managers as $mUid) {
+                    if ($mUid !== '' && $mUid !== $employeeUid) {
+                        $this->sendTalkMessage($employeeUid, $mUid, $msg);
+                    }
+                }
+                // Broadcast to selected multi-user channel if configured
+                $channelToken = $this->getSelectedTalkChannelToken();
+                if ($channelToken !== '') {
+                    $this->sendTalkToRoomToken($channelToken, $msg);
+                }
+            } catch (\Throwable $e) {
+                $this->logger->debug('Talk send (leave deleted) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            }
+        }
+    }
+
+    private function formatTalkMsgLeaveDeleted(array $leave): string {
+        $start = (string)($leave['start_date'] ?? '');
+        $end = (string)($leave['end_date'] ?? '');
+        $dayParts = trim((string)($leave['day_parts'] ?? ''));
+        $who = (string)($leave['uid'] ?? '');
+        $whoDisplay = $this->getDisplayNameSafe($who);
+        $daysMd = $this->formatDayPartsMarkdown($dayParts);
+        $md = "__                                           __\n\n";
+        $md .= "### ⚠️ Congé annulé par l'employé\n\n";
+        $md .= "**Employé**\n" . ($whoDisplay !== '' ? $whoDisplay . " (" . $who . ")" : $who) . "\n\n";
+        $startLong = $this->formatDateLongFr($start);
+        $endLong = $this->formatDateLongFr($end);
+        $md .= "**Période**\n$startLong → $endLong\n";
+        if ($daysMd !== '') {
+            $md .= "\n**Jours**\n" . $daysMd . "\n";
+        }
+        $md .= "\n_Ce congé validé a été supprimé par l'employé._\n";
+        return $md;
     }
 
     /**

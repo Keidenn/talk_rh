@@ -63,6 +63,22 @@ class LeaveNotifier implements INotifier {
             if ($notification->getLink() === '') {
                 $notification->setLink($this->urlGenerator->linkToRoute('talk_rh.page.employeeView'));
             }
+        } elseif ($subject === 'leave_deleted_by_employee') {
+            $uid = (string)($params['uid'] ?? '');
+            $start = (string)($params['start'] ?? '');
+            $end = (string)($params['end'] ?? '');
+            $label = p($l->t('Congé annulé'));
+            $text = $uid !== ''
+                ? sprintf(p($l->t('%s a annulé son congé validé du %s au %s.')), $uid, $start, $end)
+                : sprintf(p($l->t('Un congé validé du %s au %s a été annulé par l\'employé.')), $start, $end);
+
+            $notification->setParsedSubject($label)
+                ->setParsedMessage($text)
+                ->setIcon($this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('talk_rh', 'app.svg')));
+
+            if ($notification->getLink() === '') {
+                $notification->setLink($this->urlGenerator->linkToRoute('talk_rh.page.index'));
+            }
         }
 
         return $notification;
