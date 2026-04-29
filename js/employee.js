@@ -88,7 +88,7 @@
         badges.className = 'talkrh-badges';
         const type = document.createElement('span');
         type.className = 'talkrh-badge';
-        type.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
+        type.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : (l.type === 'revision' ? t('talk_rh', 'Révision') : t('talk_rh', 'Récup.')));
         const status = document.createElement('span');
         status.className = 'talkrh-badge badge-' + l.status;
         status.textContent = l.status === 'pending' ? t('talk_rh', 'En attente') : (l.status === 'approved' ? t('talk_rh', 'Approuvée') : t('talk_rh', 'Refusée'));
@@ -103,12 +103,15 @@
 
         const actions = document.createElement('div');
         actions.className = 'talkrh-actions';
-        if (l.status === 'pending') {
+        if (l.status === 'pending' || l.status === 'approved') {
           const del = document.createElement('button');
           del.className = 'danger';
           del.textContent = t('talk_rh', 'Supprimer');
           del.onclick = async () => {
-            if (!confirm(t('talk_rh', 'Supprimer cette demande ?'))) return;
+            const confirmMsg = l.status === 'approved'
+              ? t('talk_rh', 'Supprimer ce congé validé ? Votre manager sera notifié de cette annulation.')
+              : t('talk_rh', 'Supprimer cette demande ?');
+            if (!confirm(confirmMsg)) return;
             await fetch(OC.generateUrl('/apps/talk_rh/api/leaves/' + l.id), { method: 'DELETE' });
             await loadMyLeaves();
           };

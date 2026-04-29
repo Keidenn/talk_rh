@@ -19,6 +19,7 @@ use Psr\Log\LoggerInterface;
 use OCP\Calendar\IManager as CalendarManager;
 use OCP\Calendar\ICreateFromString;
 use OCP\Calendar\Exceptions\CalendarException;
+use OCP\IL10N;
 
 class LeaveService {
     public function __construct(
@@ -33,6 +34,7 @@ class LeaveService {
         private IUserManager $userManager,
         private IAccountManager $accountManager,
         private IClientService $clientService,
+        private IL10N $l10n,
         private ?CalendarManager $calendarManager = null,
     ) {}
 
@@ -68,24 +70,31 @@ class LeaveService {
             $this->notifyAdminsNewLeave($row);
             $this->logger->debug('notifyAdminsNewLeave: notified admins for leave id=' . ($row['id'] ?? 'n/a') . ' for uid=' . ($row['uid'] ?? 'n/a'), ['app' => Application::APP_ID]);
             // Talk: notify managers (if enabled)
+            $this->logger->warning('[talk_rh] Talk check: isTalkEnabled=' . ($this->isTalkEnabled() ? 'true' : 'false'), ['app' => Application::APP_ID]);
             if ($this->isTalkEnabled()) {
                 try {
                     $employeeUid = (string)$row['uid'];
                     $managers = $this->getManagerUidsFor($employeeUid);
+                    $this->logger->warning('[talk_rh] Talk: employeeUid=' . $employeeUid . ', managers=' . json_encode($managers), ['app' => Application::APP_ID]);
                     $msg = $this->formatTalkMsgNewLeave($row);
                     foreach ($managers as $mUid) {
                         if ($mUid !== '' && $mUid !== $employeeUid) {
+                            $this->logger->warning('[talk_rh] Talk: sending DM to manager=' . $mUid, ['app' => Application::APP_ID]);
                             $this->sendTalkMessage($employeeUid, $mUid, $msg);
                         }
                     }
                     // Broadcast to selected multi-user channel if configured
                     $channelToken = $this->getSelectedTalkChannelToken();
+                    $this->logger->warning('[talk_rh] Talk: channelToken=' . ($channelToken ?: '(none)'), ['app' => Application::APP_ID]);
                     if ($channelToken !== '') {
+                        $this->logger->warning('[talk_rh] Talk: sending to channel token=' . $channelToken, ['app' => Application::APP_ID]);
                         $this->sendTalkToRoomToken($channelToken, $msg);
                     }
                 } catch (\Throwable $e) {
-                    $this->logger->debug('Talk send (create) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+                    $this->logger->error('[talk_rh] Talk send (create) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
                 }
+            } else {
+                $this->logger->warning('[talk_rh] Talk is disabled, skipping notifications', ['app' => Application::APP_ID]);
             }
         }
         return $row ?: [];
@@ -125,14 +134,82 @@ class LeaveService {
         if (!$leave || $leave['uid'] !== $uid) {
             return false;
         }
-        if ($leave['status'] !== 'pending') {
-            return false; // cannot delete once approved/rejected
-        }
+        $wasApproved = ($leave['status'] === 'approved');
         $qb = $this->db->getQueryBuilder();
         $qb->delete('talk_rh_leaves')
             ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
             ->executeStatement();
+
+        // Notify managers when an approved leave is deleted by the employee
+        if ($wasApproved) {
+            $this->notifyManagersLeaveDeleted($leave);
+        }
         return true;
+    }
+
+    private function notifyManagersLeaveDeleted(array $leave): void {
+        $employeeUid = (string)($leave['uid'] ?? '');
+        if ($employeeUid === '') return;
+
+        $managers = $this->getManagerUidsFor($employeeUid);
+
+        // Notification Nextcloud
+        try {
+            $link = $this->urlGenerator->linkToRoute('talk_rh.page.index');
+            foreach ($managers as $mUid) {
+                if ($mUid === '' || $mUid === $employeeUid) continue;
+                $n = $this->notificationManager->createNotification();
+                $n->setApp(Application::APP_ID)
+                    ->setUser($mUid)
+                    ->setDateTime(new \DateTime())
+                    ->setSubject('leave_deleted_by_employee', [
+                        'uid' => $employeeUid,
+                        'start' => $leave['start_date'] ?? '',
+                        'end' => $leave['end_date'] ?? '',
+                    ])
+                    ->setObject('leave', (string)($leave['id'] ?? ''))
+                    ->setLink($link);
+                $this->notificationManager->notify($n);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->debug('Notification (leave deleted) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+        }
+
+        // Talk message
+        if ($this->isTalkEnabled()) {
+            try {
+                $msg = $this->formatTalkMsgLeaveDeleted($leave);
+                foreach ($managers as $mUid) {
+                    if ($mUid !== '' && $mUid !== $employeeUid) {
+                        $this->sendTalkMessage($employeeUid, $mUid, $msg);
+                    }
+                }
+                // Broadcast to selected multi-user channel if configured
+                $channelToken = $this->getSelectedTalkChannelToken();
+                if ($channelToken !== '') {
+                    $this->sendTalkToRoomToken($channelToken, $msg);
+                }
+            } catch (\Throwable $e) {
+                $this->logger->debug('Talk send (leave deleted) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            }
+        }
+    }
+
+    private function formatTalkMsgLeaveDeleted(array $leave): string {
+        $start = (string)($leave['start_date'] ?? '');
+        $end = (string)($leave['end_date'] ?? '');
+        $dayParts = trim((string)($leave['day_parts'] ?? ''));
+        $who = (string)($leave['uid'] ?? '');
+        $whoDisplay = $this->getDisplayNameSafe($who);
+        $daysMd = $this->formatDayPartsMarkdown($dayParts);
+        $md = "__                                           __\n\n";
+        $md .= "### ⚠️ Congé annulé par l'employé\n\n";
+        $md .= "**Employé**\n" . ($whoDisplay !== '' ? $whoDisplay . " (" . $who . ")" : $who) . "\n\n";
+        $startLong = $this->formatDateLongFr($start);
+        $endLong = $this->formatDateLongFr($end);
+        $md .= "**Période**\n$startLong → $endLong\n";
+        $md .= "\n_Ce congé validé a été supprimé par l'employé._\n";
+        return $md;
     }
 
     /**
@@ -216,15 +293,15 @@ class LeaveService {
         $summary = '';
         $type = (string)($leave['type'] ?? '');
         if ($type !== '') {
-            $typeFr = $type === 'paid' ? p($l->t('CP')) : ($type === 'unpaid' ? p($l->t('CSS')) : p($l->t('RTT')));
+            $typeFr = $type === 'paid' ? $this->l10n->t('CP') : ($type === 'unpaid' ? $this->l10n->t('CSS') : ($type === 'revision' ? $this->l10n->t('Révision') : $this->l10n->t('RTT')));
             $summary .=  $typeFr . ' - ' . $displayName;
         }
 
         $desc = '';
         $reason = trim((string)($leave['reason'] ?? ''));
-        if ($reason !== '') { $desc = p($l->t('Raison: ')) . $reason; }
+        if ($reason !== '') { $desc = $this->l10n->t('Raison: ') . $reason; }
         $adminComment = trim((string)($leave['admin_comment'] ?? ''));
-        if ($adminComment !== '') { $desc .= ($desc ? "\\n" : '') . p($l->t('Commentaire: ')) . $adminComment; }
+        if ($adminComment !== '') { $desc .= ($desc ? "\\n" : '') . $this->l10n->t('Commentaire: ') . $adminComment; }
 
         $host = parse_url($this->urlGenerator->getBaseUrl(), PHP_URL_HOST) ?: 'nextcloud';
         $componentUid = 'talk_rh-leave-' . $leaveId . '@' . $host;
@@ -322,17 +399,17 @@ class LeaveService {
                 if ($start === '' || $end === '') return false;
                 $startYmd = str_replace('-', '', $start);
                 $endExclusive = $this->dateAddDaysIso($end, 1);
-                $summary = p($l->t('Congé approuvé'));
+                $summary = $this->l10n->t('Congé approuvé');
                 $type = (string)($leave['type'] ?? '');
                 if ($type !== '') {
-                    $typeFr = $type === 'paid' ? p($l->t('Soldé')) : ($type === 'unpaid' ? p($l->t('Sans Solde')) : p($l->t('Récup.')));
+                    $typeFr = $type === 'paid' ? $this->l10n->t('Soldé') : ($type === 'unpaid' ? $this->l10n->t('Sans Solde') : ($type === 'revision' ? $this->l10n->t('Révision') : $this->l10n->t('Récup.')));
                     $summary .= ' · ' . $typeFr;
                 }
                 $desc = '';
                 $reason = trim((string)($leave['reason'] ?? ''));
-                if ($reason !== '') { $desc = p($l->t('Raison: ')) . $reason; }
+                if ($reason !== '') { $desc = $this->l10n->t('Raison: ') . $reason; }
                 $adminComment = trim((string)($leave['admin_comment'] ?? ''));
-                if ($adminComment !== '') { $desc .= ($desc ? "\\n" : '') . p($l->t('Commentaire: ')) . $adminComment; }
+                if ($adminComment !== '') { $desc .= ($desc ? "\\n" : '') . $this->l10n->t('Commentaire: ') . $adminComment; }
                 $host = parse_url($this->urlGenerator->getBaseUrl(), PHP_URL_HOST) ?: 'nextcloud';
                 $componentUid = 'talk_rh-leave-' . $leaveId . '@' . $host;
                 $dtstamp = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Ymd\THis\Z');
@@ -352,8 +429,7 @@ class LeaveService {
                 $objectUri = 'talk_rh-leave-' . $leaveId . '.ics';
             }
 
-            $base = rtrim($this->urlGenerator->getAbsoluteURL('/'), '/');
-            if (str_ends_with($base, '/index.php')) $base = substr($base, 0, -10);
+            $base = $this->getInternalBaseUrl();
             $davBase = $base . '/remote.php/dav/calendars/' . rawurlencode($uid) . '/';
             $client = $this->clientService->newClient();
             $headers = $this->buildDavHeaders();
@@ -541,33 +617,38 @@ class LeaveService {
         // Notify the requester about the decision
         $updated = $this->getLeaveById($id);
         if ($updated) {
-            $this->logger->debug('notifyUserStatusChange: leave id=' . ($updated['id'] ?? 'n/a') . ' to status=' . ($updated['status'] ?? 'n/a') . ' for uid=' . ($updated['uid'] ?? 'n/a'), ['app' => Application::APP_ID]);
+            $this->logger->warning('[talk_rh] setLeaveStatus: leave id=' . ($updated['id'] ?? 'n/a') . ' status=' . ($updated['status'] ?? 'n/a') . ' uid=' . ($updated['uid'] ?? 'n/a'), ['app' => Application::APP_ID]);
             $this->notifyUserStatusChange($updated);
             // If approved, push to user's default calendar
-            try {
-                if (($updated['status'] ?? '') === 'approved') {
+            if (($updated['status'] ?? '') === 'approved') {
+                $this->logger->warning('[talk_rh] setLeaveStatus: status is approved, pushing to calendar...', ['app' => Application::APP_ID]);
+                try {
                     $this->pushApprovedLeaveToCalendar($updated);
+                    $this->logger->warning('[talk_rh] setLeaveStatus: calendar push completed, diag=' . json_encode($this->lastCalendarDiag), ['app' => Application::APP_ID]);
+                } catch (\Throwable $e) {
+                    $this->logger->error('[talk_rh] setLeaveStatus: calendar push exception: ' . $e->getMessage(), ['app' => Application::APP_ID]);
                 }
-            } catch (\Throwable $e) {
-                $this->logger->debug('Calendar push failed for leave id=' . ($updated['id'] ?? 'n/a') . ': ' . $e->getMessage(), ['app' => Application::APP_ID]);
             }
             // Talk: notify employee about the decision (if enabled)
+            $this->logger->warning('[talk_rh] setLeaveStatus: Talk check isTalkEnabled=' . ($this->isTalkEnabled() ? 'true' : 'false'), ['app' => Application::APP_ID]);
             if ($this->isTalkEnabled()) {
                 try {
                     $employeeUid = (string)$updated['uid'];
                     $actor = $this->userSession->getUser();
                     $fromUid = $actor ? $actor->getUID() : '';
+                    $this->logger->warning('[talk_rh] setLeaveStatus: Talk fromUid=' . $fromUid . ' employeeUid=' . $employeeUid, ['app' => Application::APP_ID]);
                     $msg = $this->formatTalkMsgStatus($updated);
                     if ($fromUid !== '' && $employeeUid !== '') {
                         $this->sendTalkMessage($fromUid, $employeeUid, $msg);
                     }
                     // Broadcast to selected multi-user channel if configured
                     $channelToken = $this->getSelectedTalkChannelToken();
+                    $this->logger->warning('[talk_rh] setLeaveStatus: Talk channelToken=' . ($channelToken ?: '(none)'), ['app' => Application::APP_ID]);
                     if ($channelToken !== '') {
                         $this->sendTalkToRoomToken($channelToken, $msg);
                     }
                 } catch (\Throwable $e) {
-                    $this->logger->debug('Talk send (status) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+                    $this->logger->error('[talk_rh] setLeaveStatus: Talk send failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
                 }
             }
         }
@@ -721,46 +802,56 @@ class LeaveService {
      * Gracefully no-op if Talk is not installed or API differs.
      */
     private function sendTalkMessage(string $fromUid, string $toUid, string $message): void {
+        $this->logger->warning('[talk_rh] sendTalkMessage: fromUid=' . $fromUid . ' toUid=' . $toUid, ['app' => Application::APP_ID]);
         try {
             $token = $this->getOrCreateDirectRoomToken($toUid);
             if ($token === '') {
-                $this->logger->debug('Talk: no direct room token for toUid=' . $toUid, ['app' => Application::APP_ID]);
+                $this->logger->warning('[talk_rh] sendTalkMessage: no direct room token found for toUid=' . $toUid, ['app' => Application::APP_ID]);
                 return;
             }
-            // Minimal payload for broad compatibility — use Chat API v1
-            $this->ocsPostV1('/chat/' . rawurlencode($token) . '?format=json', [
+            $this->logger->warning('[talk_rh] sendTalkMessage: got room token=' . $token . ', sending message...', ['app' => Application::APP_ID]);
+            $result = $this->ocsPostV1('/chat/' . rawurlencode($token) . '?format=json', [
                 'message' => $message,
             ]);
+            $this->logger->warning('[talk_rh] sendTalkMessage: OCS response=' . json_encode($result), ['app' => Application::APP_ID]);
         } catch (\Throwable $e) {
-            $this->logger->debug('Talk send exception: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            $this->logger->error('[talk_rh] sendTalkMessage exception: ' . $e->getMessage(), ['app' => Application::APP_ID]);
         }
     }
 
     private function sendTalkToRoomToken(string $token, string $message): void {
+        $this->logger->warning('[talk_rh] sendTalkToRoomToken: token=' . $token, ['app' => Application::APP_ID]);
         try {
-            if (trim($token) === '') return;
-            $this->ocsPostV1('/chat/' . rawurlencode($token) . '?format=json', [
+            if (trim($token) === '') {
+                $this->logger->warning('[talk_rh] sendTalkToRoomToken: empty token, skipping', ['app' => Application::APP_ID]);
+                return;
+            }
+            $result = $this->ocsPostV1('/chat/' . rawurlencode($token) . '?format=json', [
                 'message' => $message,
             ]);
+            $this->logger->warning('[talk_rh] sendTalkToRoomToken: OCS response=' . json_encode($result), ['app' => Application::APP_ID]);
         } catch (\Throwable $e) {
-            $this->logger->debug('Talk room send exception: ' . $e->getMessage(), ['app' => Application::APP_ID]);
+            $this->logger->error('[talk_rh] sendTalkToRoomToken exception: ' . $e->getMessage(), ['app' => Application::APP_ID]);
         }
     }
 
     private function getOrCreateDirectRoomToken(string $otherUid): string {
+        $this->logger->warning('[talk_rh] getOrCreateDirectRoomToken: otherUid=' . $otherUid, ['app' => Application::APP_ID]);
         // First create/ensure direct conversation
         try {
             $resp = $this->ocsPost('/room?format=json', [
-                // According to API v4, POST /room creates conversations; for one-to-one it returns 200 if exists
-                // Try different invite formats for compatibility
                 'roomType' => '1',
                 'invite' => $otherUid,
                 'source' => 'users',
             ]);
+            $this->logger->warning('[talk_rh] getOrCreateDirectRoomToken: POST /room response=' . json_encode($resp), ['app' => Application::APP_ID]);
             $token = $this->extractTokenFromRoomResponse($resp);
-            if ($token !== '') return $token;
+            if ($token !== '') {
+                $this->logger->warning('[talk_rh] getOrCreateDirectRoomToken: extracted token=' . $token, ['app' => Application::APP_ID]);
+                return $token;
+            }
         } catch (\Throwable $e) {
-            // ignore and try alternative or fallback
+            $this->logger->warning('[talk_rh] getOrCreateDirectRoomToken: POST /room failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
         }
         try {
             $resp = $this->ocsPost('/room', [
@@ -768,16 +859,21 @@ class LeaveService {
                 'invite[]' => $otherUid,
                 'source' => 'users',
             ]);
+            $this->logger->warning('[talk_rh] getOrCreateDirectRoomToken: POST /room (alt) response=' . json_encode($resp), ['app' => Application::APP_ID]);
             $token = $this->extractTokenFromRoomResponse($resp);
             if ($token !== '') return $token;
         } catch (\Throwable $e) {
+            $this->logger->warning('[talk_rh] getOrCreateDirectRoomToken: POST /room (alt) failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
         }
         // Fallback: list rooms and find one-to-one with otherUid in name/display
         try {
+            $this->logger->warning('[talk_rh] getOrCreateDirectRoomToken: fallback - listing rooms...', ['app' => Application::APP_ID]);
             $rooms = $this->ocsGet('/room?format=json');
             $token = $this->findDirectRoomTokenInList($rooms, $otherUid);
+            $this->logger->warning('[talk_rh] getOrCreateDirectRoomToken: fallback token=' . ($token ?: '(none)'), ['app' => Application::APP_ID]);
             return $token;
         } catch (\Throwable $e) {
+            $this->logger->error('[talk_rh] getOrCreateDirectRoomToken: fallback failed: ' . $e->getMessage(), ['app' => Application::APP_ID]);
             return '';
         }
     }
@@ -820,20 +916,33 @@ class LeaveService {
         return '';
     }
 
-    private function ocsBase(): string {
+    private function getInternalBaseUrl(): string {
         $base = rtrim($this->urlGenerator->getAbsoluteURL('/'), '/');
         if (str_ends_with($base, '/index.php')) {
             $base = substr($base, 0, -10);
         }
-        return $base . '/ocs/v2.php/apps/spreed/api/v4';
+        // Inside Docker, localhost:external_port is not accessible
+        // Replace with internal URL (127.0.0.1 on port 80)
+        $parsed = parse_url($base);
+        if ($parsed !== false && isset($parsed['host'])) {
+            $host = $parsed['host'];
+            // If localhost or 127.0.0.1 with a non-standard port, use internal port 80
+            if (($host === 'localhost' || $host === '127.0.0.1') && isset($parsed['port']) && $parsed['port'] != 80) {
+                $scheme = $parsed['scheme'] ?? 'http';
+                $path = $parsed['path'] ?? '';
+                $base = $scheme . '://127.0.0.1' . $path;
+                $this->logger->warning('[talk_rh] getInternalBaseUrl: converted to internal URL: ' . $base, ['app' => Application::APP_ID]);
+            }
+        }
+        return $base;
+    }
+
+    private function ocsBase(): string {
+        return $this->getInternalBaseUrl() . '/ocs/v2.php/apps/spreed/api/v4';
     }
 
     private function ocsBaseV1(): string {
-        $base = rtrim($this->urlGenerator->getAbsoluteURL('/'), '/');
-        if (str_ends_with($base, '/index.php')) {
-            $base = substr($base, 0, -10);
-        }
-        return $base . '/ocs/v2.php/apps/spreed/api/v1';
+        return $this->getInternalBaseUrl() . '/ocs/v2.php/apps/spreed/api/v1';
     }
 
     /**

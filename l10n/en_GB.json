@@ -118,15 +118,19 @@
     "Erreur de chargement" : "Loading error",
     "Congé approuvé" : "Leave approved",
     "Nouvelle demande de congés" : "New leave request",
-    "%s a créé une demande de congés du %s au %s." : "%s has created a leave request from %s to %s.",
-    "Nouvelle demande de congés du %s au %s." : "New leave request from %s to %s.",
+    "%1$s a créé une demande de congés du %2$s au %3$s." : "%1$s has created a leave request from %2$s to %3$s.",
+    "Nouvelle demande de congés du %1$s au %2$s." : "New leave request from %1$s to %2$s.",
     "approuvée" : "approved",
     "refusée" : "rejected",
     "mise à jour" : "updated",
     "Statut de votre demande" : "Status of your request",
-    "Votre demande de congés (%s → %s) a été %s." : "Your leave request (%s → %s) has been %s.",
+    "Votre demande de congés (%1$s → %2$s) a été %3$s." : "Your leave request (%1$s → %2$s) has been %3$s.",
+    "Congé annulé" : "Leave cancelled",
+    "%1$s a annulé son congé validé du %2$s au %3$s." : "%1$s has cancelled their approved leave from %2$s to %3$s.",
+    "Un congé validé du %1$s au %2$s a été annulé par l'employé." : "An approved leave from %1$s to %2$s has been cancelled by the employee.",
     "CP" : "AL",
     "CSS" : "Unpaid",
-    "RTT" : "TOIL"
+    "RTT" : "TOIL",
+    "Révision" : "Study leave"
 },"pluralForm" :"nplurals=2; plural=(n != 1);"
 }

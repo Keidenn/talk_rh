@@ -139,7 +139,7 @@
       const tdEnd = document.createElement('td');
       tdEnd.textContent = formatDateLongFr(l.end_date);
       const tdType = document.createElement('td');
-      tdType.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
+      tdType.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : (l.type === 'revision' ? t('talk_rh', 'Révision') : t('talk_rh', 'Récup.')));
       const tdStatus = document.createElement('td');
       // Wrap status in a span with badge classes
       const statusSpan = document.createElement('span');
@@ -310,7 +310,7 @@
       badges.className = 'talkrh-badges';
       const type = document.createElement('span');
       type.className = 'talkrh-badge';
-      type.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
+      type.textContent = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : (l.type === 'revision' ? t('talk_rh', 'Révision') : t('talk_rh', 'Récup.')));
       const status = document.createElement('span');
       status.className = 'talkrh-badge badge-' + l.status;
       status.textContent = l.status === 'pending' ? t('talk_rh', 'En attente') : (l.status === 'approved' ? t('talk_rh', 'Approuvée') : t('talk_rh', 'Refusée'));
@@ -532,7 +532,7 @@
       items.forEach(l => {
         const ev = document.createElement('div');
         ev.className = 'event-badge talkrh-badge badge-' + l.status;
-        const typeLabel = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : t('talk_rh', 'Récup.'));
+        const typeLabel = l.type === 'paid' ? t('talk_rh', 'Soldé') : (l.type === 'unpaid' ? t('talk_rh', 'Sans Solde') : (l.type === 'revision' ? t('talk_rh', 'Révision') : t('talk_rh', 'Récup.')));
         const statusLabel = l.status === 'pending' ? t('talk_rh', 'En attente') : (l.status === 'approved' ? t('talk_rh', 'Approuvée') : t('talk_rh', 'Refusée'));
         const who = currentFilterUser === 'ALL' ? (l.uid + ' • ') : '';
         const part = getDayPartFor(l, iso);

@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           membersList.appendChild(li);
         });
       }
+    } catch (e) {
+      membersList.innerHTML = '<li>' + t('talk_rh', 'Erreur de chargement des membres.') + '</li>';
+    }
+  }
 
   if (saveTalkChannelBtn && talkChannelSelect) {
     saveTalkChannelBtn.addEventListener('click', async () => {
@@ -53,10 +57,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 2000);
       }
     });
-  }
-    } catch (e) {
-      membersList.innerHTML = '<li>' + t('talk_rh', 'Erreur de chargement des membres.') + '</li>';
-    }
   }
 
   try {
